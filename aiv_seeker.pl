@@ -1,6 +1,6 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl -w
 # Detect Avian Influenza Virus in NGS Metagenomics DATA 
-# Last changed Time-stamp: v0.1 <2018-05-15>
+# Last changed Time-stamp: v0.1 <2019-05-24>
 #
 # Jun Duan
 # BCCDC Public Health Laboratory
@@ -16,7 +16,6 @@
 # Canada
 # Tel: 604-707-2561
 # Fax: 604-707-2603
-#test
 
 use strict;
 use warnings;
@@ -43,16 +42,16 @@ if($help || !defined $NGS_dir || !defined $result_dir ) {
 
 die <<EOF;
 
-################################################
+############################################################
 
 Pipeline for detecting Avian Influenza Virus from NGS Data
 
 BC Centre for Disease Control
 University of British Columbia
 
-AIV_seeker V0.1: Last changed Time-stamp: <2018-05-15>
+AIV_seeker V0.1: Last changed Time-stamp: <2019-05-24>
 
-################################################
+############################################################
 
 Usage: perl AIV_seeker_v0.1.pl -i run_folder -o result_folder    
          -i	path for NGS fastq file directory
