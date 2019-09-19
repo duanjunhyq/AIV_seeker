@@ -1,6 +1,7 @@
 # AIV_seeker
-##AIV_seeker is optimized for detecting and identification of Avian Influenza Virus from metagenomics data.
+## AIV_seeker is optimized for detecting and identification of Avian Influenza Virus from metagenomics data.
 
+```
 Usage: perl AIV_seeker.pl -i run_folder -o result_folder
          -i     path for NGS fastq file directory
          -o     result folder
