@@ -15,7 +15,7 @@ conda env create -f AIV_seeker_env.yml
 git clone https://github.com/duanjunhyq/AIV_seeker.git
 ```
 
-
+### Usage
 
 ```
 Usage: perl AIV_seeker.pl -i run_folder -o result_folder
