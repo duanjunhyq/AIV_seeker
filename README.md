@@ -1,6 +1,22 @@
 # AIV_seeker
 ## AIV_seeker is optimized for detecting and identification of Avian Influenza Virus from metagenomics data.
 
+##installation
+
+### Create a conda environment by importing 
+
+'''
+conda env create -f AIV_seeker_env.yml
+'''
+
+### Download the code 
+
+'''
+git clone https://github.com/duanjunhyq/AIV_seeker.git
+'''
+
+
+
 ```
 Usage: perl AIV_seeker.pl -i run_folder -o result_folder
          -i     path for NGS fastq file directory
