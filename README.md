@@ -5,15 +5,15 @@
 
 ### Create a conda environment by importing 
 
-'''
+```
 conda env create -f AIV_seeker_env.yml
-'''
+```
 
 ### Download the code 
 
-'''
+```
 git clone https://github.com/duanjunhyq/AIV_seeker.git
-'''
+```
 
 
 
