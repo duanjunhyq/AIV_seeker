@@ -15,7 +15,7 @@ conda env create -f AIV_seeker_env.yml
 git clone https://github.com/duanjunhyq/AIV_seeker.git
 ```
 
-### activate conda environment 
+### Activate conda environment 
 
 ```
 source activate aiv_seeker
