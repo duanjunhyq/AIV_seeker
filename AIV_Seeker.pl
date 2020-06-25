@@ -21,6 +21,9 @@ use warnings;
 use Getopt::Long;
 use File::Basename;
 use Config::IniFiles;
+use File::Which;
+use File::Which qw(which);
+
 
 my ($help, $NGS_dir, $result_dir,$flow,$run_cluster);
 my ($step,$threads,$BSR,$margin,$percent,$overlap_level,$level,$identity_threshold,$cluster_identity,$chimeric_threshold);
@@ -132,6 +135,9 @@ if($step>1) {
   }
 
   if($step==3) {
+    if(-e "$result_dir/fastq_sequence_sum.txt") {
+      system("rm -fr $result_dir/fastq_sequence_sum.txt");
+    }
     &quality_filtering($result_dir,\@files);
     if($run_cluster) {
         system("cat $result_dir/tmp/*\_fastq_sequence_sum.txt >$result_dir/fastq_sequence_sum.txt");
@@ -182,7 +188,7 @@ if($step>1) {
   ####################################################
   if($step==8) {
     &assign_subtype_raw($result_dir,\@files);
-    #&raw_report($result_dir,\@files);
+    &raw_report($result_dir,\@files);
     if($flow) { 
       $step=$step+1;
     }
@@ -284,8 +290,8 @@ sub quality_filtering () {
   my $dir_fasta_processed="$result_dir/4.fasta_processed";
   check_folder($dir_file_processed);
   check_folder($dir_fasta_processed);
-  my $trimmomatic = $ini->val( 'tools', 'trimmomatic');
-  my $fastq_to_fasta = $ini->val( 'tools', 'fastq_to_fasta');
+  my $trimmomatic = which 'trimmomatic';
+  my $fastq_to_fasta = which 'fastq_to_fasta';
   my $adaptor = "$path_db/adapter.fa";
   if($run_cluster) {
     check_folder("$result_dir/tmp");
@@ -298,6 +304,7 @@ sub quality_filtering () {
       } 
     }
     check_qsub_status("flu_filtering");
+    system("rm -fr $result_dir/tmp/*");
     foreach my $items(@$files) {
       my @libs= split(/\t/,$items); 
       my $libname=$libs[0];
@@ -314,9 +321,9 @@ sub quality_filtering () {
       #system("rm -fr $dir_raw/$libname\_R1.fq");
       system("perl $exe_path/module/convert_fastq_name.pl $dir_raw/$libname\_R2.fq $dir_raw/$libname\_N\_R2.fq");
       #system("rm -fr $dir_raw/$libname\_R2.fq");
-      system("java -jar $trimmomatic PE -threads $threads -phred33 $dir_raw/$libname\_N\_R1.fq $dir_raw/$libname\_N\_R2.fq $dir_file_processed/$libname\_P\_R1.fq $dir_file_processed/$libname\_S\_R1.fq $dir_file_processed/$libname\_P\_R2.fq  $dir_file_processed/$libname\_S\_R2.fq  ILLUMINACLIP\:$adaptor\:2:30:10 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:20  MINLEN:60");
+      system("trimmomatic PE -threads $threads -phred33 $dir_raw/$libname\_N\_R1.fq $dir_raw/$libname\_N\_R2.fq $dir_file_processed/$libname\_P\_R1.fq $dir_file_processed/$libname\_S\_R1.fq $dir_file_processed/$libname\_P\_R2.fq  $dir_file_processed/$libname\_S\_R2.fq  ILLUMINACLIP\:$adaptor\:2:30:10 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:20  MINLEN:60");
       system("cat $dir_file_processed/$libname\_P\_R1.fq $dir_file_processed/$libname\_P\_R2.fq $dir_file_processed/$libname\_S\_R1.fq $dir_file_processed/$libname\_S\_R2.fq >$dir_file_processed/$libname\_combine.fastq");
-      system("$fastq_to_fasta -Q 33 -i $dir_file_processed/$libname\_combine.fastq -o $dir_fasta_processed/$libname\_raw.fasta");
+      system("fastq_to_fasta -Q 33 -i $dir_file_processed/$libname\_combine.fastq -o $dir_fasta_processed/$libname\_raw.fasta");
       system("perl $exe_path/module/sum_fastq_file.pl -i $dir_raw/$libname\_N\_R1.fq >>$result_dir/fastq_sequence_sum.txt");
       system("perl $exe_path/module/sum_fastq_file.pl -i $dir_raw/$libname\_N\_R2.fq >>$result_dir/fastq_sequence_sum.txt");
       system("perl $exe_path/module/sum_fastq_file.pl -i $dir_file_processed/$libname\_P\_R1.fq >>$result_dir/fastq_sequence_sum.txt");
@@ -337,7 +344,8 @@ sub search_by_diamond () {
   my $dir_fasta_processed="$result_dir/4.fasta_processed";
   my $dir_diamond="$result_dir/5.diamond";
   my $diamond_db = "$path_db/avian_pep_db.dmnd";
-  my $diamond = $ini->val( 'tools', 'diamond');
+  #my $diamond = $ini->val( 'tools', 'diamond');
+  my $diamond = which 'diamond';
   check_folder($dir_diamond); 
   foreach my $items(@$files) {
     my @libs= split(/\t/,$items); 
@@ -376,15 +384,16 @@ sub get_AIV_reads () {
 sub cluster_AIV_reads_vsearch () {
   my ($result_dir,$files) = @_;
   my $aiv_reads="$result_dir/6.clustered_reads";
+  my $vsearch = which 'vsearch';
   foreach my $items(@$files) {
     my @libs= split(/\t/,$items); 
     my $libname=$libs[0];
     my $source=$libs[3];
-    my $p1="vsearch --threads $threads --derep_fulllength $aiv_reads/$libname\_first_round.fa --output $aiv_reads/$libname\_reads_derep.fa --sizeout --uc $aiv_reads/$libname\_vsearch-derep.uc";
+    my $p1="$vsearch --threads $threads --derep_fulllength $aiv_reads/$libname\_first_round.fa --output $aiv_reads/$libname\_reads_derep.fa --sizeout --uc $aiv_reads/$libname\_vsearch-derep.uc";
     my $p2="perl $exe_path/module/add_tag_to_seq.pl $aiv_reads/$libname\_reads_derep.fa $aiv_reads/$libname\_reads_derep_with_tag.fa $libname";
     if(-s "$aiv_reads/$libname\_first_round.fa") {
       if($run_cluster) {
-        my $shell="qsub -o $logs -e $logs $exe_path/module/batch_qsub_vsearch.sh $exe_path $aiv_reads/$libname\_first_round.fa $aiv_reads/$libname\_reads_derep.fa $aiv_reads/$libname\_vsearch-derep.uc $aiv_reads/$libname\_reads_derep_with_tag.fa $libname";
+        my $shell="qsub -o $logs -e $logs $exe_path/module/batch_qsub_vsearch.sh $exe_path $vsearch $aiv_reads $libname";
         system($shell);
       }
       else {
@@ -406,15 +415,17 @@ sub blast_AIV () {
   check_folder($blast_dir);
   check_folder($blast_dir_vs_db);
   check_folder($blast_dir_self);
+  my $blastn = which 'blastn';
+  my $makeblastdb = which 'makeblastdb';
   foreach my $items(@$files) {
     my @libs= split(/\t/,$items); 
     my $libname=$libs[0];
     my $source=$libs[3];
-    my $p1="blastn -num_threads $threads -db $flu_ref_gene -query $aiv_reads/$libname\_reads_derep_with_tag.fa -evalue 1e-20 -out $blast_dir_self/$libname\_self.m8 -outfmt 6 -num_alignments 250 -dust no";
-    my $p2="makeblastdb -in $aiv_reads/$libname\_reads_derep_with_tag.fa -dbtype nucl";
-    my $p3="blastn -num_threads $threads -db $aiv_reads/$libname\_reads_derep_with_tag.fa -query $aiv_reads/$libname\_reads_derep_with_tag.fa -out $blast_dir_self/$libname\_self.m8 -outfmt 6 -num_alignments 1 -dust no";
+    my $p1="$blastn -num_threads $threads -db $flu_ref_gene -query $aiv_reads/$libname\_reads_derep_with_tag.fa -evalue 1e-20 -out $blast_dir_self/$libname\_self.m8 -outfmt 6 -num_alignments 250 -dust no";
+    my $p2="$makeblastdb -in $aiv_reads/$libname\_reads_derep_with_tag.fa -dbtype nucl";
+    my $p3="$blastn -num_threads $threads -db $aiv_reads/$libname\_reads_derep_with_tag.fa -query $aiv_reads/$libname\_reads_derep_with_tag.fa -out $blast_dir_self/$libname\_self.m8 -outfmt 6 -num_alignments 1 -dust no";
     if($run_cluster) {
-        my $shell="qsub -o $logs -e $logs $exe_path/module/batch_qsub_blast.sh $aiv_reads/$libname\_reads_derep_with_tag.fa $blast_dir_vs_db/$libname\_blastout.m8 $blast_dir_self/$libname\_self.m8 $flu_ref_gene $threads";
+        my $shell="qsub -o $logs -e $logs $exe_path/module/batch_qsub_blast.sh $aiv_reads/$libname\_reads_derep_with_tag.fa $blast_dir_vs_db/$libname\_blastout.m8 $blast_dir_self/$libname\_self.m8 $flu_ref_gene $threads $blastn $makeblastdb";
         system($shell);
     }
     else {
@@ -425,29 +436,6 @@ sub blast_AIV () {
   }
   if($run_cluster) {
     check_qsub_status("flu_blastn");
-  }
-}
-
-sub remove_chimeric() {
-  my ($result_dir,$files) = @_;
-  my $dir_chimeric="$result_dir/7.check_chimeric";
-  my $dir_chimeric_processed="$dir_chimeric/1.processed";
-  my $dir_chimeric_seq="$dir_chimeric/2.de_chimeric_seq";
-  my $blast_dir="$result_dir/6.blast";
-  my $blast_dir_vs_db="$blast_dir/1.blast_to_db";
-  my $blast_dir_self="$blast_dir/2.blast_to_self";
-  my $aiv_reads="$result_dir/5.clustered_reads";
-  check_folder($dir_chimeric);
-  check_folder($dir_chimeric_processed);
-  check_folder($dir_chimeric_seq);      
-  foreach my $items(@$files) {
-    my @libs= split(/\t/,$items); 
-    my $libname=$libs[0];
-    my $source=$libs[3];            
-    system("perl $exe_path/module/remove_chimeric.pl -c $chimeric_threshold -i $blast_dir_vs_db/$libname\_blastout.m8 -d $aiv_reads/$libname\_reads_derep_with_tag.fa -o $dir_chimeric_processed/$libname\_chimeric\_$chimeric_threshold\.txt >$dir_chimeric_processed/$libname\_without_chimeric\_$chimeric_threshold\.txt");
-    if(-s "$dir_chimeric_processed/$libname\_without_chimeric\_$chimeric_threshold\.txt") {
-      system("perl $exe_path/module/get_reads_first_round.pl -i $dir_chimeric_processed/$libname\_without_chimeric\_$chimeric_threshold\.txt -d $aiv_reads/$libname\_reads_derep_with_tag.fa -o $dir_chimeric_seq/$libname\_no_chimeric.fa");
-    }
   }
 }
 
@@ -620,8 +608,8 @@ sub assign_subtype_raw () {
     if(-s "$dir_chimeric_seq/$libname\_no_chimeric.fa") {
       if($run_cluster) {
         my $shell="qsub -o $logs -e $logs $exe_path/module/batch_qsub_subtype_raw.sh $exe_path $result_dir $libname $margin $BSR $percent $blast_db_ano $source";
-        print "$shell\n";
-        #system("qsub  -o $logs -e $logs $exe_path/module/batch_qsub_subtype_raw.sh $exe_path $result_dir $libname $margin $BSR $percent $blast_db_ano $source");
+        #print "$shell\n";
+        system("qsub  -o $logs -e $logs $exe_path/module/batch_qsub_subtype_raw.sh $exe_path $result_dir $libname $margin $BSR $percent $blast_db_ano $source");
       }
       else {
         system("perl $exe_path/module/parse_m8_BSR.pl -i $blast_dir_vs_db/$libname\_blastout.m8 -s $blast_dir_self/$libname\_self.m8 -d $blast_db_ano -o $cluster_subtype_step1_blast_sorted/$libname\_sorted.txt -m $dir_chimeric_seq/$libname\_no_chimeric.fa");

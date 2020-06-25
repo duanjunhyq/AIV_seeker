@@ -88,7 +88,7 @@ while(<IN>) {
   						$subname="$family\_$subtype";
   					}
   				}
-  				elsif($gene=~/MP/) {
+  				elsif($gene=~/MA/) {
   					$subname="$family\_MP";
     			}
   				elsif($gene=~/NS1/) {
@@ -121,11 +121,17 @@ open (o1,">$report_stype1");  #report1
 @sample_name=keys %GC_report;
 @sample_name=sort { substr($a, 1) <=> substr($b, 1)  } (@sample_name);
 
-
+print o1 "Libname\t#Raw_reads\t#Bases\t%GC\tFiltered_reads\t#Bases\t%GC\tHA\tNA\tOther\n";
 foreach my $libname(@sample_name) {
 	my (@HA,@NA,@other); 
+   	
+	if($libname=~/Libname/i) {
+    	next;
+    }
+
 	my $print_mark_HA=$print_mark_NA=$print_mark_other=0;
     foreach my $subname(keys %{$id_report{$libname}}) {
+    	
 		$report_item="$subname\(${$number_report{$libname}}{$subname}\)";
 		if($subname=~/\_H\d+/) {
 			push (@HA,$report_item);
@@ -137,7 +143,7 @@ foreach my $libname(@sample_name) {
 			push @other,$report_item;
 		}
 	}
-	print o1 "$libname\t$GC_report{$libname}\t";
+	print o1 "$GC_report{$libname}";
 	if(scalar @HA>0) {
 		foreach $HA_tag(@HA) {
 			if($print_mark_HA==0) {
@@ -211,27 +217,28 @@ my @title_all = (@title, @other_sum);
 print o2 "subtype";
 foreach my $libname(@sample_name) {
 	print o2 "\t$libname";
+
 }
 print o2 "\n";
 foreach $title_name (@title_all) {
 	print o2 "$title_name";
 	foreach my $libname(@sample_name) {
-		if($title_name eq "A_MP") {
-			$title_M1="A_M1";
-			$title_M2="A_M2";
-			if(${$number_report{$libname}}{$title_M1}) {
-			  	$report_item="${$number_report{$libname}}{$title_M1}";
-				print o2 "\t$report_item";
-			}
-			elsif(${$number_report{$libname}}{$title_M2}) {
-			  	$report_item="${$number_report{$libname}}{$title_M2}";
-				print o2 "\t$report_item";
-			}
-			else {
-			  	print o2 "\t\-";
-			}
-		}
-		else {
+		# if($title_name eq "A_MP") {
+		# 	$title_M1="A_M1";
+		# 	$title_M2="A_M2";
+		# 	if(${$number_report{$libname}}{$title_M1}) {
+		# 	  	$report_item="${$number_report{$libname}}{$title_M1}";
+		# 		print o2 "\t$report_item";
+		# 	}
+		# 	elsif(${$number_report{$libname}}{$title_M2}) {
+		# 	  	$report_item="${$number_report{$libname}}{$title_M2}";
+		# 		print o2 "\t$report_item";
+		# 	}
+		# 	else {
+		# 	  	print o2 "\t\-";
+		# 	}
+		# }
+		# else {
 			if(${$number_report{$libname}}{$title_name}) {
 			  	$report_item="${$number_report{$libname}}{$title_name}";
 				print o2 "\t$report_item";
@@ -239,7 +246,7 @@ foreach $title_name (@title_all) {
 			else {
 			  	print o2 "\t\-";
 			}
-		}
+		# }
 		
 	}
 	print o2 "\n";
@@ -258,7 +265,7 @@ for($i=1;$i<10;$i++) {
 	push (@title,"A\_N$i");
 }
 my @title_all = (@title, @other_sum);
-print o3 "Library";
+print o3 "Libname\t#Raw_reads\t#Bases\t%GC\tFiltered_reads\t#Bases\t%GC";
 foreach my $subtype(@title_all) {
 	print o3 "\t$subtype";
 }

@@ -13,8 +13,8 @@ while(<IN>) {
 	my $line=$_;
 	@items= split(/\s+/,$line);	
 	my $reads_name=$items[0];
-  	my $gene=$items[3];
-	my $class=$items[4];
+  	my $gene=$items[4];
+	my $class=$items[3];
 	my $serotype=$items[5];
 	my $identity=$items[6];
 	if($gene=~/HA|NA/) {
