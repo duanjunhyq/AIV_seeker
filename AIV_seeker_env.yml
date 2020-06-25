@@ -1,5 +1,6 @@
-name: aiv_test
+name: aiv_seeker
 channels:
+  - eumetsat
   - bioconda
   - conda-forge
   - defaults
@@ -49,6 +50,7 @@ dependencies:
   - openjdk=11.0.1=h600c080_1018
   - openssl=1.1.1g=h516909a_0
   - perl=5.26.2=h516909a_1006
+  - perl-file-which=1.23=pl526h14c3975_0
   - perl-list-util=1.38=pl526_1
   - pip=20.1.1=py_1
   - pthread-stubs=0.4=h14c3975_1001
