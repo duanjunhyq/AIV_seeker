@@ -69,9 +69,8 @@ Usage: perl AIV_seeker.pl -i run_folder -o result_folder
             step 5: Cluster reads
             step 6: Second search by BLAST
             step 7: Remove chimeric sequences
-            step 8: cross-contamination detection
-            step 9: Detect subtype
-            step 10: Generate report
+            step 8: Assign subtypes and generate report
+            step 9: cross-contamination detection and generate report
          -f run the current step and following steps (default false), no parameter
          -b BSR score (default 0.4)
          -m margin of BSR score (default 0.3)
@@ -99,7 +98,7 @@ $threads = $threads || 45;
 $BSR = $BSR || 0.4;
 $margin = $margin || 0.3;
 $percent = $percent || 0.9;
-$level = $overlap_level || 0.7;
+$overlap_level = $overlap_level || 0.7;
 $identity_threshold = $identity_threshold || 90;
 $chimeric_threshold = $chimeric_threshold || 0.75;
 $cluster_identity=$cluster_identity||0.97;
@@ -194,21 +193,11 @@ if($step>1) {
     }
   }
 
-  # if($step==8) {
-  #   &debleeding($result_dir,\@files);
-  #   if($flow) { 
-  #     $step=$step+1;
-  #   }
- #  }
- #  if($step==9) {
-  #   &assign_subtype_debled($result_dir,\@files);
-  #   if($flow) { 
-  #     $step=$step+1;
-  #   }
- #  }
- #  if($step==10) {
-  #   &debled_report($result_dir,\@files);
- #  }
+  if($step==9) {
+    &debleeding($result_dir,\@files);
+    &assign_subtype_debled($result_dir,\@files);
+    &debled_report($result_dir,\@files);
+  }
 }
 
     
@@ -471,12 +460,14 @@ sub remove_chimeric() {
   }
 }
 
+
 sub debleeding() {
   my ($result_dir,$files) = @_;
-  my $vsearch = $ini->val( 'tools', 'vsearch');
+  #my $vsearch = $ini->val( 'tools', 'vsearch');
+  my $vsearch = which 'vsearch';
   my %source_all;
-  my $dir_chimeric_seq="$result_dir/7.check_chimeric/2.de_chimeric_seq";
-  my $dir_debled="$result_dir/8.debled\_$cluster_identity";
+  my $dir_chimeric_seq="$result_dir/8.check_chimeric/2.de_chimeric_seq";
+  my $dir_debled="$result_dir/10.debled\_$overlap_level\_$cluster_identity";
   my $dir_combined_seq="$dir_debled/0.combined_seq";
   check_folder($dir_combined_seq);
   system("rm -fr $dir_combined_seq/*");
@@ -505,53 +496,80 @@ sub debleeding() {
   check_folder($dir_debled_step5_cross_removed);
   check_folder($dir_debled_step6_reads_list);
   check_folder($debled_reads_ok);
-  foreach my $source(keys %source_all) {
-    system("$vsearch --threads $threads --cluster_size $dir_combined_seq/$source\_debled_step1.fa --id $cluster_identity --target_cov 0.6 --centroids $dir_debled_step1_vsearch_out/$source\_centroids.fa --uc $dir_debled_step1_vsearch_out/$source\_reads_cluster.uc --strand both --sizeout");
-    system("perl $exe_path/module/parse_uc_to_otu.pl -i $dir_debled_step1_vsearch_out/$source\_reads_cluster.uc -m $dir_debled_step2_otu/$source\_otu.txt -n $dir_debled_step2_otu/$source\_otu_name.txt -x $dir_debled_step2_otu/$source\_otu_orginal.txt");
-    system("perl $exe_path/module/parse_otu.pl -i $dir_debled_step2_otu/$source\_otu_orginal.txt -m $dir_debled_step3_otu_processed/$source\_otu_uniq.txt -n $dir_debled_step3_otu_processed/$source\_otu_cross.txt");
-    system("perl $exe_path/module/detect_cross_talk.pl -i $dir_debled_step3_otu_processed/$source\_otu_cross.txt -o $dir_debled_step4_cross/$source\_otu_cross_removed.txt -m $dir_debled_step4_cross/$source\_otu_cross_multiple_dominant.txt -n $dir_debled_step4_cross/$source\_otu_cross_single_dominant.txt");
-    system("cat $dir_debled_step3_otu_processed/$source\_otu_uniq.txt $dir_debled_step4_cross/$source\_otu_cross_removed.txt >$dir_debled_step5_cross_removed/$source\_otu_processed.txt");
-    system("perl $exe_path/module/get_debleeded_reads_list_x.pl -i $dir_debled_step5_cross_removed/$source\_otu_processed.txt -d $dir_debled_step2_otu/$source\_otu_name.txt -o $dir_debled_step6_reads_list/$source\_reads_list_ok.txt");
-    system("perl $exe_path/module/get_reads_first_round.pl -i $dir_debled_step6_reads_list/$source\_reads_list_ok.txt -d $dir_combined_seq/$source\_debled_step1.fa -o $dir_debled_step6_reads_list/$source\_reads_all_ok.fa");
-    system("perl $exe_path/module/divide_fasta_into_lib.pl $dir_debled_step6_reads_list/$source\_reads_all_ok.fa $debled_reads_ok $source");
-  }
-}
 
- sub assign_subtype_debled () {
+  foreach my $source(keys %source_all) {
+    if($run_cluster) {
+      system("qsub -o $logs -e $logs $exe_path/module/batch_qsub_debled.sh $exe_path $dir_combined_seq $source $cluster_identity $dir_debled $overlap_level $threads $vsearch");
+    }
+    else {
+      system("$vsearch --threads $threads --cluster_size $dir_combined_seq/$source\_debled_step1.fa --id $cluster_identity --target_cov $overlap_level --centroids $dir_debled_step1_vsearch_out/$source\_centroids.fa --uc $dir_debled_step1_vsearch_out/$source\_reads_cluster.uc --strand both --sizeout");
+      system("perl $exe_path/module/parse_uc_to_otu.pl -i $dir_debled_step1_vsearch_out/$source\_reads_cluster.uc -m $dir_debled_step2_otu/$source\_otu.txt -n $dir_debled_step2_otu/$source\_otu_name.txt -x $dir_debled_step2_otu/$source\_otu_orginal.txt");
+      system("perl $exe_path/module/parse_otu.pl -i $dir_debled_step2_otu/$source\_otu_orginal.txt -m $dir_debled_step3_otu_processed/$source\_otu_uniq.txt -n $dir_debled_step3_otu_processed/$source\_otu_cross.txt");
+      system("perl $exe_path/module/detect_cross_talk.pl -i $dir_debled_step3_otu_processed/$source\_otu_cross.txt -o $dir_debled_step4_cross/$source\_otu_cross_removed.txt -m $dir_debled_step4_cross/$source\_otu_cross_multiple_dominant.txt -n $dir_debled_step4_cross/$source\_otu_cross_single_dominant.txt");
+      system("cat $dir_debled_step3_otu_processed/$source\_otu_uniq.txt $dir_debled_step4_cross/$source\_otu_cross_removed.txt >$dir_debled_step5_cross_removed/$source\_otu_processed.txt");
+      system("perl $exe_path/module/get_debleeded_reads_list_x.pl -i $dir_debled_step5_cross_removed/$source\_otu_processed.txt -d $dir_debled_step2_otu/$source\_otu_name.txt -o $dir_debled_step6_reads_list/$source\_reads_list_ok.txt");
+      system("perl $exe_path/module/get_reads_first_round.pl -i $dir_debled_step6_reads_list/$source\_reads_list_ok.txt -d $dir_combined_seq/$source\_debled_step1.fa -o $dir_debled_step6_reads_list/$source\_reads_all_ok.fa");
+      system("perl $exe_path/module/divide_fasta_into_lib.pl $dir_debled_step6_reads_list/$source\_reads_all_ok.fa $debled_reads_ok $source");
+    }
+      
+  }
+  if($run_cluster) {
+    check_qsub_status("flu_debled");
+  }
+  
+ }
+
+
+
+sub assign_subtype_debled () {
   my ($result_dir,$files) = @_;
-  my $blast_dir_vs_db="$result_dir/6.blast/1.blast_to_db";
-  my $blast_dir_self="$result_dir/6.blast/2.blast_to_self";
-  my $cluster_subtype="$result_dir/9.subtype\_$cluster_identity";
+  my $blast_dir_vs_db="$result_dir/7.blast/1.blast_to_db";
+  my $blast_dir_self="$result_dir/7.blast/2.blast_to_self";
+  my $dir_debled="$result_dir/10.debled\_$overlap_level\_$cluster_identity";
+  my $cluster_subtype="$dir_debled/8.subtype_debled";
   my $cluster_subtype_step1_blast_sorted="$cluster_subtype/1.step_blast_sorted";
   my $cluster_subtype_step2_subtype="$cluster_subtype/2.step_subtype_file";
   my $cluster_subtype_step3_seq="$cluster_subtype/3.step_subtype_seq";
   check_folder($cluster_subtype_step1_blast_sorted);
   check_folder($cluster_subtype_step2_subtype);
-  check_folder($cluster_subtype_step3_seq);
-  my $debled_reads_ok="$result_dir/8.debled\_$cluster_identity/7.debled_reads_ok";
+  check_folder($cluster_subtype_step3_seq);  
+  my $debled_reads_ok="$result_dir/10.debled\_$overlap_level\_$cluster_identity/7.debled_reads_ok";
   foreach my $items(@$files) {
     my @libs= split(/\t/,$items); 
     my $libname=$libs[0];
     my $source=$libs[3];
     check_folder("$cluster_subtype_step3_seq/$source");
-    my $GISAID_relation = $ini->val( 'database', 'GISAID_relation');
+    #my $flu_ref_gene_relation = $ini->val( 'database', 'flu_ref_gene_relation');
+    my $flu_ref_gene_relation = "$path_db/avian_flu_gene_0.99_relationship.txt";
     if(-s "$debled_reads_ok/$source/$libname\_reads_ok.fa") {
-      system("perl $exe_path/module/parse_m8_BSR.pl -i $blast_dir_vs_db/$libname\_blastout.m8 -s $blast_dir_self/$libname\_self.m8 -d $GISAID_relation -o $cluster_subtype_step1_blast_sorted/$libname\_sorted.txt -m $debled_reads_ok/$source/$libname\_reads_ok.fa");
-      if(-s "$cluster_subtype_step1_blast_sorted/$libname\_sorted.txt") {
-        system("perl $exe_path/module/assign_subtype_v2.pl -i $cluster_subtype_step1_blast_sorted/$libname\_sorted.txt -o $cluster_subtype_step2_subtype/$libname\_subtype.txt -u $cluster_subtype_step2_subtype/$libname\_unclassified.txt -m $margin -b $BSR -p $percent");
-        system("perl $exe_path/module/sum_subtype_depricated.pl -i $cluster_subtype_step2_subtype/$libname\_subtype.txt -o $cluster_subtype_step2_subtype/$libname\_summary_depricated.txt");
-        system("perl $exe_path/module/getseq_subtype.pl -i $cluster_subtype_step2_subtype/$libname\_subtype.txt -d $debled_reads_ok/$source/$libname\_reads_ok.fa -o $cluster_subtype_step3_seq/$source");
+      if($run_cluster) {
+        system("qsub -o $logs -e $logs $exe_path/module/batch_qsub_subtype_debled.sh $exe_path $result_dir $libname $cluster_identity $margin $BSR $percent $flu_ref_gene_relation $source $overlap_level");
       }
+      else {
+        system("perl $exe_path/module/parse_m8_BSR.pl -i $blast_dir_vs_db/$libname\_blastout.m8 -s $blast_dir_self/$libname\_self.m8 -d $flu_ref_gene_relation -o $cluster_subtype_step1_blast_sorted/$libname\_sorted.txt -m $debled_reads_ok/$source/$libname\_reads_ok.fa");
+        print "perl $exe_path/module/parse_m8_BSR.pl -i $blast_dir_vs_db/$libname\_blastout.m8 -s $blast_dir_self/$libname\_self.m8 -d $flu_ref_gene_relation -o $cluster_subtype_step1_blast_sorted/$libname\_sorted.txt -m $debled_reads_ok/$source/$libname\_reads_ok.fa\n";
+        if(-s "$cluster_subtype_step1_blast_sorted/$libname\_sorted.txt") {
+          system("perl $exe_path/module/assign_subtype_v2.pl -i $cluster_subtype_step1_blast_sorted/$libname\_sorted.txt -o $cluster_subtype_step2_subtype/$libname\_subtype.txt -u $cluster_subtype_step2_subtype/$libname\_unclassified.txt -m $margin -b $BSR -p $percent");
+          system("perl $exe_path/module/sum_subtype_depricated.pl -i $cluster_subtype_step2_subtype/$libname\_subtype.txt -o $cluster_subtype_step2_subtype/$libname\_summary_depricated.txt");
+          system("perl $exe_path/module/getseq_subtype.pl -i $cluster_subtype_step2_subtype/$libname\_subtype.txt -d $debled_reads_ok/$source/$libname\_reads_ok.fa -o $cluster_subtype_step3_seq/$source");
+        }
+
+      }
+      
     }
   }
+  if($run_cluster) {
+    check_qsub_status("flu_subtype_debled");
+  }
+  
 }
 
 sub debled_report() {
-  my $dir_report="$result_dir/10.report\_$cluster_identity";
+  my $dir_report="$result_dir/10.debled\_$overlap_level\_$cluster_identity/9.report_debled";
   check_folder($dir_report);
-  system("cat $result_dir/9.subtype\_$cluster_identity/2.step_subtype_file/*_summary_depricated.txt >$dir_report/subtype_report_debled_unsorted_depricated.txt");
+  system("cat $result_dir/10.debled\_$overlap_level\_$cluster_identity/8.subtype_debled/2.step_subtype_file/*_summary_depricated.txt >$dir_report/subtype_report_debled_unsorted.txt");
   my $gc_sum="$result_dir/sum.txt";
-  my $input="$dir_report/subtype_report_debled_unsorted_depricated.txt";
+  my $input="$dir_report/subtype_report_debled_unsorted.txt";
   my $output="$dir_report/report_debled";
   &generate_report_cluster($gc_sum,$input,$output);
   system("rm -fr $input");

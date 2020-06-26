@@ -20,13 +20,13 @@ overlap_level=${10}
 blast_dir=$result_dir/7.blast
 blast_dir_vs_db=$blast_dir/1.blast_to_db
 blast_dir_self=$blast_dir/2.blast_to_self
-cluster_subtype=$result_dir/10.subtype\_$overlap_level\_$cluster_identity
-
-
+dir_debled=$result_dir/10.debled\_$overlap_level\_$cluster_identity
+cluster_subtype=$dir_debled/8.subtype_debled
 cluster_subtype_step1_blast_sorted=$cluster_subtype/1.step_blast_sorted
 cluster_subtype_step2_subtype=$cluster_subtype/2.step_subtype_file
 cluster_subtype_step3_seq=$cluster_subtype/3.step_subtype_seq
-debled_reads_ok=$result_dir/9.debled\_$overlap_level\_$cluster_identity/7.debled_reads_ok
+
+debled_reads_ok=$result_dir/10.debled\_$overlap_level\_$cluster_identity/7.debled_reads_ok
 
 perl $exe_path/module/parse_m8_BSR.pl -i $blast_dir_vs_db/$libname\_blastout.m8 -s $blast_dir_self/$libname\_self.m8 -d $flu_ref_gene_relation -o $cluster_subtype_step1_blast_sorted/$libname\_sorted.txt -m $debled_reads_ok/$source/$libname\_reads_ok.fa
 
