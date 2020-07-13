@@ -67,16 +67,27 @@ while(<IN>) {
 	my @word1= split/\s+/,$djm1;
   if($word1[8]>=$BSR && $word1[5]>=$identity_threshold) {
     my $query=$word1[0];
-    my $gene=$word1[2];
-    my $class=$word1[3];
+    my $class=$word1[2];
+    my $gene=$word1[3];
     my $serotype=$word1[4];
     my $identity=$word1[5];
-    if($gene=~/HA|NA/) {
-      $sub_full_name="$gene\_$class\_$serotype";
+    if($serotype=~/(H\d+)(N\d+)/){
+        my $temp_HA=$1;
+        my $temp_NA=$2;
+        if($gene=~/HA/) {
+          $sub_full_name="$class\_$gene\_$temp_HA";
+        }
+        elsif($gene=~/NA/) {
+          $sub_full_name="$class\_$gene\_$temp_NA";
+        }
+        else{
+          $sub_full_name="$class\_$gene\_un";
+        }
     }
     else {
-      $sub_full_name="$gene\_$class\_un";
+      $sub_full_name="$class\_$gene\_un";
     }
+    #print "$sub_full_name\n";
     if($mark{$query}) {
       my $margin_dif=($max_BSR-$word1[8])/$max_BSR;
       if($margin_dif<=$margin) {

@@ -37,7 +37,7 @@ while (<I>) {
 	my @words= split/\s+/,$line;	
 	$sample_name=pop @words;
 	if($words[0]) {
-		my $filename="$sample_name\_$words[4]\_$words[3]\_$words[5]";
+		my $filename="$sample_name\_$words[3]\_$words[4]\_$words[5]";
 		if($outputfile{$filename}) {
 			open(n1,">>$opts{'o'}/$filename\.fa");
 			print n1 ">$line\n$seqdb{$words[0]}\n";
