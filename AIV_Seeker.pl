@@ -651,5 +651,6 @@ sub raw_report() {
   my $input="$dir_report/subtype_report_raw_unsorted.txt";
   my $output="$dir_report/report_raw";
   &generate_report_cluster($gc_sum,$input,$output);
+  system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_raw_s2.csv -o $dir_report/report.pdf");
   system("rm -fr $input");
 }
