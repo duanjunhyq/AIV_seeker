@@ -1,1 +1,5 @@
 ./database/*
+database
+./database/refseq.genomes.k21s1000.msh
+./database/avian_flu_gene.0.99.fas
+./database/assembly_summary_refseq.txt
