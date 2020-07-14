@@ -102,7 +102,6 @@ $overlap_level = $overlap_level || 0.7;
 $identity_threshold = $identity_threshold || 90;
 $chimeric_threshold = $chimeric_threshold || 0.75;
 $cluster_identity=$cluster_identity||0.97;
-
 if (-d "$NGS_dir") {
   $NGS_dir=~s/\/$//;
 }
@@ -134,7 +133,7 @@ if($step>1) {
   }
 
   if($step==3) {
-    if(-e "$result_dir/fastq_sequence_sum.txt") {
+    if(-s "$result_dir/fastq_sequence_sum.txt") {
       system("rm -fr $result_dir/fastq_sequence_sum.txt");
     }
     &quality_filtering($result_dir,\@files);
@@ -194,16 +193,23 @@ if($step>1) {
   }
 
   if($step==9) {
-    #&debleeding($result_dir,\@files);
+    &debleeding($result_dir,\@files);
     &assign_subtype_debled($result_dir,\@files);
     &debled_report($result_dir,\@files);
   }
+
+  #step101 is a testing function to generate coverage map (assuming only contain one strain for each sample)
+  if($step==101) {
+    #&find_refseq($result_dir,\@files);
+    &get_depth($result_dir,\@files);
+  }
+
 }
 
     
 sub check_filelist() {
   my ($run_list) = @_;
-  if (-e $run_list) {
+  if (-s $run_list) {
     print "File list is already existing. Would you like to generate a new list (Y/N):";
     my $checkpoint;
     do {
@@ -653,4 +659,71 @@ sub raw_report() {
   &generate_report_cluster($gc_sum,$input,$output);
   system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_raw_s2.csv -o $dir_report/report.pdf");
   system("rm -fr $input");
+}
+
+sub find_refseq () {
+  my ($result_dir,$files) = @_;
+  my $coverage_dir="$result_dir/101.coverage";
+  my $refseq_tab="$coverage_dir/1.ref_align_tab";
+  my $refseq_seq="$coverage_dir/2.ref_seq";
+  check_folder("$refseq_tab");
+  check_folder("$refseq_seq");
+  my $mash_ref_db = "$exe_path/database/refseq.genomes.k21s1000.msh";
+  my $assembly_summary_refseq = "$exe_path/database/assembly_summary_refseq.txt";
+  foreach my $items(@$files) {
+    my @libs= split(/\t/,$items); 
+    my $libname=$libs[0];
+
+    ##method 1
+    my $dir_chimeric_seq="$result_dir/8.check_chimeric/2.de_chimeric_seq/$libname\_no_chimeric.fa";
+    system("mash sketch -m 5 $dir_chimeric_seq");
+    system("mash dist $mash_ref_db $dir_chimeric_seq\.msh > $refseq_tab/$libname.tab");
+    system("sort -gk3 $refseq_tab/$libname.tab >$refseq_tab/$libname\_sorted.tab");
+    system("perl $exe_path/module/get_refseq_GCF_dj.pl -i $refseq_tab/$libname\_sorted.tab -d $assembly_summary_refseq");
+    system("mv $libname\_ref.fa $refseq_seq");
+    system("mv $libname\_g.txt $refseq_seq");
+    #method 2
+    # my $HA_NA="$refseq_tab/$libname\_HA_NA.fa";
+    # system("cat $result_dir/9.subtype_raw/3.step_subtype_seq/1.raw/$libname\_A\_HA\_*.fa >$HA_NA");
+    # system("cat $result_dir/9.subtype_raw/3.step_subtype_seq/1.raw/$libname\_A\_NA\_*.fa >>$HA_NA");
+    # system("mash sketch -m 5 $HA_NA");
+    # system("mash dist $mash_ref_db $HA_NA\.msh > $refseq_tab/$libname.tab");
+    # system("sort -gk3 $refseq_tab/$libname.tab >$refseq_tab/$libname\_sorted.tab");
+    # system("perl $exe_path/module/get_refseq_GCF_dj.pl -i $refseq_tab/$libname\_sorted.tab -d $assembly_summary_refseq");
+    # system("mv $libname\_ref.fa $refseq_seq");
+    # system("mv $libname\_g.txt $refseq_seq");
+  }
+  
+}
+
+sub get_depth() {
+  my ($result_dir,$files) = @_;
+  my $coverage_dir="$result_dir/101.coverage";
+  my $refseq_tab="$coverage_dir/1.ref_align_tab";
+  my $refseq_seq="$coverage_dir/2.ref_seq";
+  my $dir_depth="$coverage_dir/3.depth";
+  check_folder("$dir_depth");
+  my $mark_label=1;
+  foreach my $items(@$files) {
+    my @libs= split(/\t/,$items); 
+    my $libname=$libs[0];
+    my $dir_chimeric_seq="$result_dir/8.check_chimeric/2.de_chimeric_seq/$libname\_no_chimeric.fa";
+    system("bowtie2-build $refseq_seq/$libname\_ref.fa $refseq_seq/$libname\_refdb");
+    system("bowtie2 -x $refseq_seq/$libname\_refdb -f $dir_chimeric_seq -S $dir_depth/$libname.sam");
+    system("samtools view -bS $dir_depth/$libname.sam > $dir_depth/$libname.bam");
+    system("samtools sort $dir_depth/$libname.bam -o $dir_depth/$libname.sorted.bam");
+    system("samtools depth $dir_depth/$libname.sorted.bam > $dir_depth/$libname\_depth.txt");
+    system("bedtools genomecov -d -ibam $dir_depth/$libname.sorted.bam >> $dir_depth/$libname\_cov.txt");
+    if($mark_label==1) {      
+      system("rm -fr $coverage_dir/depth_cov_sum_*.txt");
+      system("perl $exe_path/module/generate_depth_cov_report.pl -l $libname -i $dir_depth/$libname\_cov.txt -o $coverage_dir/depth_cov_sum -m");
+      $mark_label=0;
+    }
+    else {
+      system("perl $exe_path/module/generate_depth_cov_report.pl -l $libname -i $dir_depth/$libname\_cov.txt -o $coverage_dir/depth_cov_sum");
+    }
+    
+  }
+  system("python $exe_path/module/draw_coverage_v0.5.py -i $result_dir/filelist.txt -d $dir_depth -o $coverage_dir/coverage_fig");
+    
 }
