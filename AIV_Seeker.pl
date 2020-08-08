@@ -20,7 +20,6 @@ use strict;
 use warnings;
 use Getopt::Long;
 use File::Basename;
-use Config::IniFiles;
 use File::Which;
 use File::Which qw(which);
 
@@ -87,10 +86,6 @@ EOF
 }
 
 my $exe_path = dirname(__FILE__);
-my $config_file = "$exe_path/config/config.ini";
-our $ini = Config::IniFiles->new(
-        -file    => $config_file
-        ) or die "Could not open $config_file!";
 
 my $path_db = "$exe_path/database";
 $step = $step || 0;
