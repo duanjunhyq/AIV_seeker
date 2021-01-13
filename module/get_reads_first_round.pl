@@ -29,8 +29,8 @@ while (<I2>) {
 			$seq .= $line;             
 	   	}
 	    $seq=~s/\s+//g;
-		if ($name{$head}) {
-			print O ">$head\n$seq\n";
+		if ($name{$head1}) {
+			print O ">$head1\n$seq\n";
 		}
 	}
 }
