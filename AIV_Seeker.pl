@@ -193,7 +193,7 @@ if($step>1) {
   }
 
   if($step==9) {
-    &debleeding($result_dir,\@files);
+    #&debleeding($result_dir,\@files);
     &assign_subtype_debled($result_dir,\@files);
     &debled_report($result_dir,\@files);
   }
@@ -556,6 +556,8 @@ sub assign_subtype_debled () {
         if(-s "$cluster_subtype_step1_blast_sorted/$libname\_sorted.txt") {
           system("perl $exe_path/module/assign_subtype_v2.pl -i $cluster_subtype_step1_blast_sorted/$libname\_sorted.txt -o $cluster_subtype_step2_subtype/$libname\_subtype.txt -u $cluster_subtype_step2_subtype/$libname\_unclassified.txt -m $margin -b $BSR -p $percent");
           system("perl $exe_path/module/sum_subtype_depricated.pl -i $cluster_subtype_step2_subtype/$libname\_subtype.txt -o $cluster_subtype_step2_subtype/$libname\_summary_depricated.txt\n");
+          system("perl $exe_path/module/sum_subtype_uniq.pl -i $cluster_subtype_step2_subtype/$libname\_subtype.txt -o $cluster_subtype_step2_subtype/$libname\_summary_uniq.txt\n");
+          print "perl $exe_path/module/sum_subtype_uniq.pl -i $cluster_subtype_step2_subtype/$libname\_subtype.txt -o $cluster_subtype_step2_subtype/$libname\_summary_uniq.txt\n";
           system("perl $exe_path/module/getseq_subtype.pl -i $cluster_subtype_step2_subtype/$libname\_subtype.txt -d $debled_reads_ok/$source/$libname\_reads_ok.fa -o $cluster_subtype_step3_seq/$source");
         }
 
@@ -573,11 +575,16 @@ sub debled_report() {
   my $dir_report="$result_dir/10.debled\_$overlap_level\_$cluster_identity/9.report_debled";
   check_folder($dir_report);
   system("cat $result_dir/10.debled\_$overlap_level\_$cluster_identity/8.subtype_debled/2.step_subtype_file/*_summary_depricated.txt >$dir_report/subtype_report_debled_unsorted.txt");
+  system("cat $result_dir/10.debled\_$overlap_level\_$cluster_identity/8.subtype_debled/2.step_subtype_file/*_summary_uniq.txt >$dir_report/subtype_report_debled_uniq_unsorted.txt");
   my $gc_sum="$result_dir/sum.txt";
   my $input="$dir_report/subtype_report_debled_unsorted.txt";
+  my $input_uniq="$dir_report/subtype_report_debled_uniq_unsorted.txt";
   my $output="$dir_report/report_debled";
+  my $output_uniq="$dir_report/report_debled_uniq";
   &generate_report_cluster($gc_sum,$input,$output);
+  &generate_report_cluster($gc_sum,$input_uniq,$output_uniq);
   system("rm -fr $input");
+  system("rm -fr $input_uniq");
 }
 
 
@@ -639,6 +646,7 @@ sub assign_subtype_raw () {
         if(-s "$cluster_subtype_step1_blast_sorted/$libname\_sorted.txt") {
           system("perl $exe_path/module/assign_subtype_v2.pl -i $cluster_subtype_step1_blast_sorted/$libname\_sorted.txt -o $cluster_subtype_step2_subtype/$libname\_subtype.txt -u $cluster_subtype_step2_subtype/$libname\_unclassified.txt -m $margin -b $BSR -p $percent");
           system("perl $exe_path/module/sum_subtype_depricated.pl -i $cluster_subtype_step2_subtype/$libname\_subtype.txt -o $cluster_subtype_step2_subtype/$libname\_summary_depricated.txt");
+          system("perl $exe_path/module/sum_subtype_uniq.pl -i $cluster_subtype_step2_subtype/$libname\_subtype.txt -o $cluster_subtype_step2_subtype/$libname\_summary_uniq.txt");
           system("perl $exe_path/module/getseq_subtype.pl -i $cluster_subtype_step2_subtype/$libname\_subtype.txt -d $aiv_reads_first_round/$libname\_reads_derep_with_tag.fa -o $cluster_subtype_step3_seq/$source");
         }
       }
@@ -653,12 +661,18 @@ sub raw_report() {
   my $dir_report="$result_dir/9.subtype_raw/4.report";
   check_folder($dir_report);
   system("cat $result_dir/9.subtype\_raw/2.step_subtype_file/*_summary_depricated.txt >$dir_report/subtype_report_raw_unsorted.txt");
+  system("cat $result_dir/9.subtype\_raw/2.step_subtype_file/*_summary_uniq.txt >$dir_report/subtype_report_uniq_unsorted.txt");
   my $gc_sum="$result_dir/sum.txt";
   my $input="$dir_report/subtype_report_raw_unsorted.txt";
+  my $input_uniq="$dir_report/subtype_report_uniq_unsorted.txt";
   my $output="$dir_report/report_raw";
+  my $output_uniq="$dir_report/report_uniq";
   &generate_report_cluster($gc_sum,$input,$output);
+  &generate_report_cluster($gc_sum,$input_uniq,$output_uniq);
   system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_raw_s2.csv -o $dir_report/report.pdf");
+  system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_uniq_s2.csv -o $dir_report/report_uniq.pdf");
   system("rm -fr $input");
+  system("rm -fr $input_uniq");
 }
 
 sub find_refseq () {
