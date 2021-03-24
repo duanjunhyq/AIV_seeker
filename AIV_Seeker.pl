@@ -193,14 +193,14 @@ if($step>1) {
   }
 
   if($step==9) {
-    #&debleeding($result_dir,\@files);
+    &debleeding($result_dir,\@files);
     &assign_subtype_debled($result_dir,\@files);
     &debled_report($result_dir,\@files);
   }
 
   #step101 is a testing function to generate coverage map (assuming only contain one strain for each sample)
   if($step==101) {
-    #&find_refseq($result_dir,\@files);
+    &find_refseq($result_dir,\@files);
     &get_depth($result_dir,\@files);
   }
 
@@ -307,6 +307,7 @@ sub quality_filtering () {
       system($shell);
     }
     check_qsub_status("flu_stat");
+    check_qsub_status("flu_filtering");
   }
   else {
     foreach my $items(@$files) {
@@ -329,7 +330,7 @@ sub quality_filtering () {
     }
   }
   
-  check_qsub_status("flu_filtering");
+  
     
 }
 
@@ -416,7 +417,7 @@ sub blast_AIV () {
     my @libs= split(/\t/,$items); 
     my $libname=$libs[0];
     my $source=$libs[3];
-    my $p1="$blastn -num_threads $threads -db $flu_ref_gene -query $aiv_reads/$libname\_reads_derep_with_tag.fa -evalue 1e-20 -out $blast_dir_self/$libname\_self.m8 -outfmt 6 -num_alignments 250 -dust no";
+    my $p1="$blastn -num_threads $threads -db $flu_ref_gene -query $aiv_reads/$libname\_reads_derep_with_tag.fa -evalue 1e-20 -out $blast_dir_vs_db/$libname\_blastout.m8 -outfmt 6 -num_alignments 250 -dust no";
     my $p2="$makeblastdb -in $aiv_reads/$libname\_reads_derep_with_tag.fa -dbtype nucl";
     my $p3="$blastn -num_threads $threads -db $aiv_reads/$libname\_reads_derep_with_tag.fa -query $aiv_reads/$libname\_reads_derep_with_tag.fa -out $blast_dir_self/$libname\_self.m8 -outfmt 6 -num_alignments 1 -dust no";
     if($run_cluster) {
@@ -557,7 +558,6 @@ sub assign_subtype_debled () {
           system("perl $exe_path/module/assign_subtype_v2.pl -i $cluster_subtype_step1_blast_sorted/$libname\_sorted.txt -o $cluster_subtype_step2_subtype/$libname\_subtype.txt -u $cluster_subtype_step2_subtype/$libname\_unclassified.txt -m $margin -b $BSR -p $percent");
           system("perl $exe_path/module/sum_subtype_depricated.pl -i $cluster_subtype_step2_subtype/$libname\_subtype.txt -o $cluster_subtype_step2_subtype/$libname\_summary_depricated.txt\n");
           system("perl $exe_path/module/sum_subtype_uniq.pl -i $cluster_subtype_step2_subtype/$libname\_subtype.txt -o $cluster_subtype_step2_subtype/$libname\_summary_uniq.txt\n");
-          print "perl $exe_path/module/sum_subtype_uniq.pl -i $cluster_subtype_step2_subtype/$libname\_subtype.txt -o $cluster_subtype_step2_subtype/$libname\_summary_uniq.txt\n";
           system("perl $exe_path/module/getseq_subtype.pl -i $cluster_subtype_step2_subtype/$libname\_subtype.txt -d $debled_reads_ok/$source/$libname\_reads_ok.fa -o $cluster_subtype_step3_seq/$source");
         }
 
@@ -579,10 +579,12 @@ sub debled_report() {
   my $gc_sum="$result_dir/sum.txt";
   my $input="$dir_report/subtype_report_debled_unsorted.txt";
   my $input_uniq="$dir_report/subtype_report_debled_uniq_unsorted.txt";
-  my $output="$dir_report/report_debled";
+  my $output="$dir_report/report_debled_raw";
   my $output_uniq="$dir_report/report_debled_uniq";
   &generate_report_cluster($gc_sum,$input,$output);
   &generate_report_cluster($gc_sum,$input_uniq,$output_uniq);
+  system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_debled_raw_s2.csv -o $dir_report/report_debled_raw");
+  system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_debled_uniq_s2.csv -o $dir_report/report_debled_uniq");
   system("rm -fr $input");
   system("rm -fr $input_uniq");
 }
@@ -669,8 +671,8 @@ sub raw_report() {
   my $output_uniq="$dir_report/report_uniq";
   &generate_report_cluster($gc_sum,$input,$output);
   &generate_report_cluster($gc_sum,$input_uniq,$output_uniq);
-  system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_raw_s2.csv -o $dir_report/report.pdf");
-  system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_uniq_s2.csv -o $dir_report/report_uniq.pdf");
+  system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_raw_s2.csv -o $dir_report/report_raw");
+  system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_uniq_s2.csv -o $dir_report/report_uniq");
   system("rm -fr $input");
   system("rm -fr $input_uniq");
 }
