@@ -54,16 +54,16 @@ while(<IN>) {
 
 close(IN);
 
-print o "Libname\t#Raw_reads\t#Pairs\t#Bases\t%GC\tFinal_reads\t#Bases\t%GC\t#Reads after filtering (pairs)\t#Bases\t%GC\tSingle_F\t#Bases\t%GC\tSingle_R\t#Bases\t%GC\tMerged_reads\t#Bases\t%GC\tUn_merged_F\t#Bases\t%GC\tUn_merged_R\t#Bases\t%GC\n";
-
+#print o "Libname\t#Raw_reads\t#Pairs\t#Bases\t%GC\tFinal_reads\t#Bases\t%GC\t#Reads after filtering (pairs)\t#Bases\t%GC\tSingle_F\t#Bases\t%GC\tSingle_R\t#Bases\t%GC\tMerged_reads\t#Bases\t%GC\tUn_merged_F\t#Bases\t%GC\tUn_merged_R\t#Bases\t%GC\n";
+print o "Libname\t#Raw_reads\t#Pairs\t#Bases\t%GC\tFinal_reads\t#Bases\t%GC\n";
 foreach $lib(keys %libs) {
 	$raw_GC{$lib}=$raw_GC{$lib}/2;
 	$processed_single_GC{$lib}=$processed_single_GC{$lib}/2;
 	$processed_paired_GC{$lib}=$processed_paired_GC{$lib}/2;
 	print o "$lib\t$raw_no_reads{$lib}\t$raw_no_bases{$lib}\t$raw_GC{$lib}\t";
-	print o "$final_no_reads{$lib}\t$final_no_bases{$lib}\t$final_GC{$lib}\t";
-	print o "$processed_paired_no_reads{$lib}\t$processed_paired_no_bases{$lib}\t$processed_paired_GC{$lib}\t";
-	print o "$processed_single_no_pair{$lib}\t$processed_single_no_bases{$lib}\t$processed_single_GC{$lib}\n";
+	print o "$final_no_reads{$lib}\t$final_no_bases{$lib}\t$final_GC{$lib}\n";
+	# print o "$processed_paired_no_reads{$lib}\t$processed_paired_no_bases{$lib}\t$processed_paired_GC{$lib}\t";
+	# print o "$processed_single_no_pair{$lib}\t$processed_single_no_bases{$lib}\t$processed_single_GC{$lib}\n";
 	 
 }
 

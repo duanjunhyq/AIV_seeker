@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 # Detect avian influenza virus in NGS metagenomics DATA 
 #
 # Jun Duan
@@ -20,12 +20,12 @@ use strict;
 use warnings;
 use Getopt::Long;
 use File::Basename;
-use Config::IniFiles;
+#use Config::IniFiles;
 use File::Which;
 use File::Which qw(which);
 
 
-my ($help, $NGS_dir, $result_dir,$flow,$run_cluster);
+my ($help, $NGS_dir, $result_dir,$flow,$run_cluster,$run_galaxy,$run_debled);
 my ($step,$threads,$BSR,$margin,$percent,$overlap_level,$level,$identity_threshold,$cluster_identity,$chimeric_threshold);
 
 GetOptions(
@@ -38,11 +38,13 @@ GetOptions(
     'margin|m=f' => \$margin,
     'percent|p=f' => \$percent,
     'flow|f' => \$flow,
-    'level|l=f' => \$overlap_level,
     'identity_threshold|x=f' => \$identity_threshold,
     'chimeric_threshold|z=f' => \$chimeric_threshold,
+    'level|l=f' => \$overlap_level,
     'cluster_identity|c=f' => \$cluster_identity,
     'run_cluster|a' => \$run_cluster,
+    'run_galaxy|g' => \$run_galaxy,
+    'run_debled|w' => \$run_debled,
   );
 
 if($help || !defined $NGS_dir || !defined $result_dir ) {
@@ -75,26 +77,28 @@ Usage: perl AIV_seeker.pl -i run_folder -o result_folder
          -b BSR score (default 0.4)
          -m margin of BSR score (default 0.3)
          -p percentage of concordant subtype (default 0.9)
-         -t number of threads
+         -t number of threads (default 2)
          -h display help message
          -l overlap level (default 0.7)
          -x threshold for identity (default 90%)
          -z threshold for chimeric check (default 90%)
          -c identity for clustering when dealing with cross-talking (default 0.97)
          -a run by cluster (default false)
+         -g run galaxy job (default false)
+         -w run debleeding process
          
 EOF
 }
 
 my $exe_path = dirname(__FILE__);
-my $config_file = "$exe_path/config/config.ini";
-our $ini = Config::IniFiles->new(
-        -file    => $config_file
-        ) or die "Could not open $config_file!";
+# my $config_file = "$exe_path/config/config.ini";
+# our $ini = Config::IniFiles->new(
+#         -file    => $config_file
+#         ) or die "Could not open $config_file!";
 
 my $path_db = "$exe_path/database";
 $step = $step || 0;
-$threads = $threads || 45;
+$threads = $threads || 2;
 $BSR = $BSR || 0.4;
 $margin = $margin || 0.3;
 $percent = $percent || 0.9;
@@ -113,6 +117,7 @@ else {
 check_folder($result_dir);
 my $logs="$result_dir/logs";
 check_folder($logs);
+
 my $run_list="$result_dir/filelist.txt";
 
 if($step==1 or $step==0) {
@@ -192,7 +197,7 @@ if($step>1) {
     }
   }
 
-  if($step==9) {
+  if($step==9 and $run_debled) {
     &debleeding($result_dir,\@files);
     &assign_subtype_debled($result_dir,\@files);
     &debled_report($result_dir,\@files);
@@ -264,8 +269,14 @@ sub QC_report () {
         system($shell);
       }
       else {
-        system("gunzip -c $libs[1] >$dir_raw/$libname\_R1.fq");
-        system("gunzip -c $libs[2] >$dir_raw/$libname\_R2.fq");
+        if($run_galaxy) {
+          system("ln -s $libs[1] $dir_raw/$libname\_R1.fq");
+          system("ln -s $libs[2] $dir_raw/$libname\_R2.fq");
+        }
+        else {
+          system("gunzip -c $libs[1] >$dir_raw/$libname\_R1.fq");
+          system("gunzip -c $libs[2] >$dir_raw/$libname\_R2.fq");          
+        }
         system("fastqc -t $threads $dir_raw/$libname\_R1.fq -o $dir_QC");
         system("fastqc -t $threads $dir_raw/$libname\_R2.fq -o $dir_QC");
       }
@@ -583,8 +594,16 @@ sub debled_report() {
   my $output_uniq="$dir_report/report_debled_uniq";
   &generate_report_cluster($gc_sum,$input,$output);
   &generate_report_cluster($gc_sum,$input_uniq,$output_uniq);
-  system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_debled_raw_s2.csv -o $dir_report/report_debled_raw");
-  system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_debled_uniq_s2.csv -o $dir_report/report_debled_uniq");
+  if($run_galaxy) {}
+  else {
+    if($run_galaxy) {
+    }
+    else {
+      system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_debled_raw_s2.csv -o $dir_report/report_debled_raw");
+      system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_debled_uniq_s2.csv -o $dir_report/report_debled_uniq");
+    }
+  
+  } 
   system("rm -fr $input");
   system("rm -fr $input_uniq");
 }

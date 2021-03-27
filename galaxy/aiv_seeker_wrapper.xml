@@ -1,0 +1,131 @@
+<tool id="aiv_seeker" name="aiv_seeker" version="0.1.0">
+    <requirements>
+      <requirement type="package" version="0.1">aiv_seeker</requirement>
+    </requirements>
+    <command detect_errors="exit_code"><![CDATA[
+      python $__tool_directory__/aiv_seeker_wrapper.py
+
+      #if $input_type_conditional.input_type=="paired_collection"#
+          #for $input in $input_type_conditional.fastq_input.keys()#
+              -i $input,$input_type_conditional.fastq_input[$input].forward,$input_type_conditional.fastq_input[$input].reverse
+          #end for#
+      #end if#
+      -x ${qc_report}
+      -y ${report_raw}
+      #if $debleeding_parameters.set_debleeding
+        -l ${debleeding_parameters.l}
+        -c $(debleeding_parameters.c)
+        -z $report_debled
+      #end if
+      #if $more_parameters.set_params
+        -b ${more_parameters.b}
+        -p $(more_parameters.p)
+        -m $(more_parameters.m)
+      #end if
+    
+    ]]></command>
+
+   <inputs>
+        <conditional name="input_type_conditional">
+            <param name="input_type" type="select" label="Input Type">
+                <option value="paired_collection" selected="true">List of Paired Collection</option>
+            </param>
+            <when value="paired_collection">
+                <param name="fastq_input" format="fastqsanger" type="data_collection" collection_type="list:paired" label="Select dataset pair" help="Specify paired dataset collection containing paired reads"/>
+            </when>
+        </conditional>
+
+
+        <conditional name="debleeding_parameters">
+            <param name="set_debleeding" type="boolean" label="Debleeding(Default Off))">
+            </param>
+            <when value="true">
+                <param argument="-l" label="Overlap Level (Default: 0.6)" type="float" min="0.4" max="0.9" value="0.6" />
+                <param argument="-c" label="Identity for cross-talking checking (Default: 0.97)" type="float" min="0.9" max="1" value="0.97" />
+            </when>
+            <when value="false">
+            </when>
+        </conditional>
+
+        <conditional name="more_parameters">
+            <param name="set_params" type="boolean" label="Set More Parameters">
+            </param>
+            <when value="true">
+                <param argument="-b" label="BSR Score (Default: 0.4)" type="float" value="0.4" />
+                <param argument="-m" label="Margin (From the top, Default: 0.3)" type="float" value="0.3" />
+                <param argument="-p" label="Concordant rate (Default: 0.9)" type="float" value="0.9" />
+            </when>
+            <when value="false">
+            </when>
+        </conditional>
+
+    </inputs>
+
+  <outputs>
+    <data format="html" name="qc_report" label="${tool.name} on ${on_string} (MultiQC report)"/>
+    <data format="tabular" name="report_raw" label="${tool.name} on ${on_string} (Subtyping report (raw))"/>
+    <data format="tabular" name="report_debled" label="${tool.name} on ${on_string} (Subtyping report (debled))">
+        <filter>debleeding_parameters['set_debleeding'] == True</filter>
+    </data>
+  </outputs>
+
+
+  <tests>
+    <test>
+      <param name="input" value="fa_gc_content_input.fa"/>
+      <output name="out_file1" file="fa_gc_content_output.txt"/>
+    </test>
+  </tests>
+
+  <help>
+<![CDATA[
+
+**AIV_seeker options**
+
+
+Usage: perl AIV_seeker.pl -i run_folder -o result_folder
+
+         -i path for NGS fastq file directory         
+         -o result folder         
+         -s step number
+
+            step 1: Generate the fastq file list
+            step 2: Generate QC report
+            step 3: Quality filtering and merging
+            step 4: First search by Diamond
+            step 5: Cluster reads
+            step 6: Second search by BLAST
+            step 7: Remove chimeric sequences
+            step 8: cross-contamination detection
+            step 9: Detect subtype
+            step 10: Generate report
+
+         -f run the current step and following steps (default false), no parameter
+         -b BSR score (default 0.4)
+         -m margin of BSR score (default 0.3)
+         -p percentage of concordant subtype (default 0.9)
+         -t number of threads
+         -h display help message
+         -l overlap level (default 0.6)
+         -x threshold for identity (default 90%)
+         -z threshold for chimeric check (default 90%)
+         -c identity for clustering when dealing with cross-talking (default 0.97)
+         -a run by cluster (default false)
+
+ ]]>
+  </help>
+
+  <citations>
+        <citation type="bibtex">
+@misc{githubseqtk,
+  author = {Jun Duan, Lauren Tindale, Kevin Kuchinski, Michelle Coombe, Agatha N. Jassem, Chelsea
+G. Himsworth, Natalie Prystajecky, William Hsiao},
+  year = {},
+  title = {An automated system for genomic analysis of targeted resequencing NGS data in avian influenza virus surveillance},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  url = {https://github.com/duanjunhyq/AIV_seeker},
+}</citation>
+    </citations>
+
+</tool>
