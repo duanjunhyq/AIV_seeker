@@ -690,8 +690,13 @@ sub raw_report() {
   my $output_uniq="$dir_report/report_uniq";
   &generate_report_cluster($gc_sum,$input,$output);
   &generate_report_cluster($gc_sum,$input_uniq,$output_uniq);
-  system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_raw_s2.csv -o $dir_report/report_raw");
-  system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_uniq_s2.csv -o $dir_report/report_uniq");
+  if($run_galaxy) {
+
+  }
+  else {
+    system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_raw_s2.csv -o $dir_report/report_raw");
+    system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_uniq_s2.csv -o $dir_report/report_uniq");
+  }
   system("rm -fr $input");
   system("rm -fr $input_uniq");
 }
