@@ -6,6 +6,7 @@ import argparse
 import sys
 import csv
 import re
+import pyqt5
 
 parser = argparse.ArgumentParser(description='Generate heatmap for aiv_seeker')
 parser.add_argument("-i", help="input file (required)", type=str)
