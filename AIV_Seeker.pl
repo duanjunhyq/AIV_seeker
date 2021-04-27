@@ -25,7 +25,7 @@ use File::Which;
 use File::Which qw(which);
 
 
-my ($help, $NGS_dir, $result_dir,$flow,$run_cluster,$run_galaxy,$run_debled);
+my ($help, $NGS_dir, $result_dir,$flow,$run_cluster,$run_galaxy,$run_debled,$run_paired_only);
 my ($step,$threads,$BSR,$margin,$percent,$overlap_level,$level,$identity_threshold,$cluster_identity,$chimeric_threshold);
 
 GetOptions(
@@ -45,6 +45,7 @@ GetOptions(
     'run_cluster|a' => \$run_cluster,
     'run_galaxy|g' => \$run_galaxy,
     'run_debled|w' => \$run_debled,
+    'run_paired_only|k' => \$run_paired_only,
   );
 
 if($help || !defined $NGS_dir || !defined $result_dir ) {
@@ -86,6 +87,7 @@ Usage: perl AIV_seeker.pl -i run_folder -o result_folder
          -a run by cluster (default false)
          -g run galaxy job (default false)
          -w run debleeding process
+         -k generate results based on paired reads only (remove unpaired reads)
          
 EOF
 }
@@ -106,6 +108,7 @@ $overlap_level = $overlap_level || 0.7;
 $identity_threshold = $identity_threshold || 90;
 $chimeric_threshold = $chimeric_threshold || 0.75;
 $cluster_identity=$cluster_identity||0.97;
+
 if (-d "$NGS_dir") {
   $NGS_dir=~s/\/$//;
 }
@@ -126,6 +129,7 @@ if($step==1 or $step==0) {
     $step=2;
   }     
 }
+
 my @files=&get_lib_list($run_list);
 
 if($step>1) {
@@ -269,13 +273,17 @@ sub QC_report () {
         system($shell);
       }
       else {
-        if($run_galaxy) {
-          system("ln -s $libs[1] $dir_raw/$libname\_R1.fq");
-          system("ln -s $libs[2] $dir_raw/$libname\_R2.fq");
-        }
-        else {
+        if($libs[1]=~/\.[fq|fastq]$/i) {
+            system("ln -s $libs[1] $dir_raw/$libname\_R1.fq");
+            system("ln -s $libs[2] $dir_raw/$libname\_R2.fq");
+        }      
+        elsif($libs[1]=~/\.gz$/i) {
           system("gunzip -c $libs[1] >$dir_raw/$libname\_R1.fq");
           system("gunzip -c $libs[2] >$dir_raw/$libname\_R2.fq");          
+        }
+        else {
+          print "Please check your input files are ended with fq, fastqc, or gz";
+          exit;
         }
         system("fastqc -t $threads $dir_raw/$libname\_R1.fq -o $dir_QC");
         system("fastqc -t $threads $dir_raw/$libname\_R2.fq -o $dir_QC");
@@ -304,8 +312,15 @@ sub quality_filtering () {
     foreach my $items(@$files) {
       my @libs= split(/\t/,$items); 
       my $libname=$libs[0];
+      my $shell;
       if($run_cluster) {
-        my $shell= "qsub -o $logs -e $logs $exe_path/module/batch_qsub_filtering.sh $exe_path $libname $result_dir $trimmomatic $fastq_to_fasta $adaptor $threads";
+        if($run_paired_only) {
+          my $run_paired_only_tag="True";
+          $shell= "qsub -o $logs -e $logs $exe_path/module/batch_qsub_filtering.sh $exe_path $libname $result_dir $trimmomatic $fastq_to_fasta $adaptor $threads $run_paired_only_tag";
+        }
+        else {
+          $shell= "qsub -o $logs -e $logs $exe_path/module/batch_qsub_filtering.sh $exe_path $libname $result_dir $trimmomatic $fastq_to_fasta $adaptor $threads";
+        }        
         system($shell);
       } 
     }
@@ -329,7 +344,13 @@ sub quality_filtering () {
       system("perl $exe_path/module/convert_fastq_name.pl $dir_raw/$libname\_R2.fq $dir_raw/$libname\_N\_R2.fq");
       #system("rm -fr $dir_raw/$libname\_R2.fq");
       system("trimmomatic PE -threads $threads -phred33 $dir_raw/$libname\_N\_R1.fq $dir_raw/$libname\_N\_R2.fq $dir_file_processed/$libname\_P\_R1.fq $dir_file_processed/$libname\_S\_R1.fq $dir_file_processed/$libname\_P\_R2.fq  $dir_file_processed/$libname\_S\_R2.fq  ILLUMINACLIP\:$adaptor\:2:30:10 LEADING:20 TRAILING:20 SLIDINGWINDOW:4:20  MINLEN:60");
-      system("cat $dir_file_processed/$libname\_P\_R1.fq $dir_file_processed/$libname\_P\_R2.fq $dir_file_processed/$libname\_S\_R1.fq $dir_file_processed/$libname\_S\_R2.fq >$dir_file_processed/$libname\_combine.fastq");
+      if($run_paired_only) {
+        system("cat $dir_file_processed/$libname\_P\_R1.fq $dir_file_processed/$libname\_P\_R2.fq >$dir_file_processed/$libname\_combine.fastq");
+      }
+      else {
+        system("cat $dir_file_processed/$libname\_P\_R1.fq $dir_file_processed/$libname\_P\_R2.fq $dir_file_processed/$libname\_S\_R1.fq $dir_file_processed/$libname\_S\_R2.fq >$dir_file_processed/$libname\_combine.fastq");
+      }
+      
       system("fastq_to_fasta -Q 33 -i $dir_file_processed/$libname\_combine.fastq -o $dir_fasta_processed/$libname\_raw.fasta");
       system("perl $exe_path/module/sum_fastq_file.pl -i $dir_raw/$libname\_N\_R1.fq >>$result_dir/fastq_sequence_sum.txt");
       system("perl $exe_path/module/sum_fastq_file.pl -i $dir_raw/$libname\_N\_R2.fq >>$result_dir/fastq_sequence_sum.txt");
