@@ -31,7 +31,7 @@ Usage: perl AIV_seeker.pl -i run_folder -o result_folder
          -s step number
             step 1: Generate the fastq file list
             step 2: Generate QC report
-            step 3: Quality filtering and merging
+            step 3: Quality filtering
             step 4: First search by Diamond
             step 5: Cluster reads
             step 6: Second search by BLAST
@@ -46,7 +46,7 @@ Usage: perl AIV_seeker.pl -i run_folder -o result_folder
          -h display help message
          -l overlap level (default 0.7)
          -x threshold for identity (default 90%)
-         -z threshold for chimeric check (default 90%)
+         -z threshold for chimeric check (default 75%)
          -c identity for clustering when dealing with cross-talking (default 0.97)
          -a run by cluster (default false)
          -g run galaxy job (default false)

@@ -113,9 +113,9 @@ while(<IN>) {
 close(IN);
 
 
-$report_stype1=$output_file."_s1.csv";
-$report_stype2=$output_file."_s2.csv";
-$report_stype3=$output_file."_s3.csv";
+$report_stype1=$output_file."_s1.tsv";
+$report_stype2=$output_file."_s2.tsv";
+$report_stype3=$output_file."_s3.tsv";
 open (o1,">$report_stype1");  #report1
 
 @sample_name=keys %GC_report;

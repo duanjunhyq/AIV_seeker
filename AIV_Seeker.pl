@@ -67,7 +67,7 @@ Usage: perl AIV_seeker.pl -i run_folder -o result_folder
          -s step number
             step 1: Generate the fastq file list
             step 2: Generate QC report
-            step 3: Quality filtering and merging
+            step 3: Quality filtering
             step 4: First search by Diamond
             step 5: Cluster reads
             step 6: Second search by BLAST
@@ -82,7 +82,7 @@ Usage: perl AIV_seeker.pl -i run_folder -o result_folder
          -h display help message
          -l overlap level (default 0.7)
          -x threshold for identity (default 90%)
-         -z threshold for chimeric check (default 90%)
+         -z threshold for chimeric check (default 75%)
          -c identity for clustering when dealing with cross-talking (default 0.97)
          -a run by cluster (default false)
          -g run galaxy job (default false)
@@ -273,17 +273,21 @@ sub QC_report () {
         system($shell);
       }
       else {
-        if($libs[1]=~/\.[fq|fastq]$/i) {
+        if($libs[1]=~/\.fq$/i) {
             system("ln -s $libs[1] $dir_raw/$libname\_R1.fq");
             system("ln -s $libs[2] $dir_raw/$libname\_R2.fq");
-        }      
+        }  
+        if($libs[1]=~/\.fastq$/i) {
+            system("ln -s $libs[1] $dir_raw/$libname\_R1.fq");
+            system("ln -s $libs[2] $dir_raw/$libname\_R2.fq");
+        }       
         elsif($libs[1]=~/\.gz$/i) {
           system("gunzip -c $libs[1] >$dir_raw/$libname\_R1.fq");
           system("gunzip -c $libs[2] >$dir_raw/$libname\_R2.fq");          
         }
-	elsif($libs[1]=~/\.dat$/i){
-	    system("ln -s $libs[1] $dir_raw/$libname\_R1.fq");
-	    system("ln -s $libs[2] $dir_raw/$libname\_R2.fq");
+        elsif($libs[1]=~/\.dat$/i){
+          system("ln -s $libs[1] $dir_raw/$libname\_R1.fq");
+          system("ln -s $libs[2] $dir_raw/$libname\_R2.fq");
 	
 	}
         else {
@@ -625,8 +629,8 @@ sub debled_report() {
     if($run_galaxy) {
     }
     else {
-      system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_debled_raw_s2.csv -o $dir_report/report_debled_raw");
-      system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_debled_uniq_s2.csv -o $dir_report/report_debled_uniq");
+      system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_debled_raw_s2.tsv -o $dir_report/report_debled_raw");
+      system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_debled_uniq_s2.tsv -o $dir_report/report_debled_uniq");
     }
   
   } 
@@ -720,11 +724,11 @@ sub raw_report() {
 
   }
   else {
-    system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_raw_s2.csv -o $dir_report/report_raw");
-    system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_uniq_s2.csv -o $dir_report/report_uniq");
+    system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_raw_s2.tsv -o $dir_report/report_raw");
+    system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_uniq_s2.tsv -o $dir_report/report_uniq");
   }
-  # system("rm -fr $input");
-  # system("rm -fr $input_uniq");
+  system("rm -fr $input");
+  system("rm -fr $input_uniq");
 }
 
 sub find_refseq () {
