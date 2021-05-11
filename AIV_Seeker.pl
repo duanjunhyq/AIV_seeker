@@ -281,6 +281,11 @@ sub QC_report () {
           system("gunzip -c $libs[1] >$dir_raw/$libname\_R1.fq");
           system("gunzip -c $libs[2] >$dir_raw/$libname\_R2.fq");          
         }
+	elsif($libs[1]=~/\.dat$/i){
+	    system("ln -s $libs[1] $dir_raw/$libname\_R1.fq");
+	    system("ln -s $libs[2] $dir_raw/$libname\_R2.fq");
+	
+	}
         else {
           print "Please check your input files are ended with fq, fastqc, or gz";
           exit;
@@ -718,8 +723,8 @@ sub raw_report() {
     system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_raw_s2.csv -o $dir_report/report_raw");
     system("python $exe_path/module/generate_heatmap_v0.3.py -i $dir_report/report_uniq_s2.csv -o $dir_report/report_uniq");
   }
-  system("rm -fr $input");
-  system("rm -fr $input_uniq");
+  # system("rm -fr $input");
+  # system("rm -fr $input_uniq");
 }
 
 sub find_refseq () {

@@ -23,8 +23,9 @@ while(<IN>) {
 
       if($lib_path) { 
             $lib_fullname=basename($lib_path);
-      	@name1= split(/\./,$lib_fullname);
-      	@name2= split(/\_/,$name1[0]);
+      	#@name1= split(/\./,$lib_fullname);
+      	#@name2= split(/\_/,$name1[0]);
+            @name2= split(/\_/,$lib_fullname);
             $libname=$name2[0];
 	      $libs{$libname}=1;
       	if($lib_path=~/0\.raw_fastq/) {
