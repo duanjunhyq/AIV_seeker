@@ -121,7 +121,7 @@ open (o1,">$report_stype1");  #report1
 @sample_name=keys %GC_report;
 @sample_name=sort { substr($a, 1) <=> substr($b, 1)  } (@sample_name);
 
-print o1 "Libname\t#Raw_reads\t#Bases\t%GC\tFiltered_reads\t#Bases\t%GC\tHA\tNA\tOther\n";
+print o1 "Libname\t#Raw_reads\t#Bases\t%GC\t#Cleaned_reads\t#Bases\t%GC\tHA\tNA\tOther\n";
 foreach my $libname(@sample_name) {
 	my (@HA,@NA,@other); 
    	

@@ -106,7 +106,7 @@ os.system(com)
 
 
 
-# result_report_raw=tmp_dir_path+"/9.subtype_raw/4.report/report_raw_s1.csv"
+# result_report_raw=tmp_dir_path+"/9.subtype_raw/4.report/report_raw_s1.tsv"
 
 #QC report
 
@@ -119,11 +119,11 @@ shutil.copyfile(qc_report_file, qc_report)
 #shutil.copyfile(tmp_dir_path+"/filelist.txt",qc_report)
 
 #Subtyping report
-report_raw_file=tmp_dir_path+"/9.subtype_raw/4.report/report_uniq_s1.csv"
+report_raw_file=tmp_dir_path+"/9.subtype_raw/4.report/report_uniq_s1.tsv"
 shutil.copyfile(report_raw_file, report_raw)
 
 if(args.report_debled):
-    result_report_debled=tmp_dir_path+'/10.debled_'+args.debled_overlap+'_'+args.debled_identity+'/9.report_debled'+'/report_debled_uniq_s1.csv'
+    result_report_debled=tmp_dir_path+'/10.debled_'+args.debled_overlap+'_'+args.debled_identity+'/9.report_debled'+'/report_debled_uniq_s1.tsv'
     shutil.copyfile(result_report_debled, args.report_debled)
 
 
