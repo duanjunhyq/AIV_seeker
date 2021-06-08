@@ -25,7 +25,7 @@ source activate aiv_seeker
 
 ```
 
-Usage: perl AIV_seeker.pl -i run_folder -o result_folder
+Usage: perl AIV_seeker.pl -i run_folder -o result_folder    
          -i path for NGS fastq file directory
          -o result folder
          -s step number
@@ -51,6 +51,7 @@ Usage: perl AIV_seeker.pl -i run_folder -o result_folder
          -a run by cluster (default false)
          -g run galaxy job (default false)
          -w run debleeding process
+         -k generate results based on paired reads only (remove unpaired reads)
 
 ```
 
