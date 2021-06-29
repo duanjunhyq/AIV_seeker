@@ -18,7 +18,7 @@ git clone https://github.com/duanjunhyq/AIV_seeker.git
 ### Activate conda environment 
 
 ```
-source activate aiv_seeker
+source activate __aiv_seeker@0.1
 ```
 
 ### Usage
