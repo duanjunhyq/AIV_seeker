@@ -3,11 +3,6 @@
 
 ##installation
 
-### Create a conda environment by importing 
-
-```
-conda env create -f AIV_seeker_env.yml
-```
 
 ### Download the code 
 
@@ -15,10 +10,21 @@ conda env create -f AIV_seeker_env.yml
 git clone https://github.com/duanjunhyq/AIV_seeker.git
 ```
 
+### Create a conda environment by importing 
+
+```
+conda env create -f AIV_seeker_env.yml
+```
+
+
 ### Activate conda environment 
 
 ```
 source activate __aiv_seeker@0.1
+```
+
+```
+cpan install File::Which
 ```
 
 ### Usage
