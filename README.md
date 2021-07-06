@@ -23,6 +23,7 @@ conda env create -f AIV_seeker_env.yml
 source activate __aiv_seeker@0.1
 ```
 
+Please install File::Which Perl module if it's missing.
 ```
 cpan install File::Which
 ```
