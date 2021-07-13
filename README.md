@@ -13,6 +13,7 @@ git clone https://github.com/duanjunhyq/AIV_seeker.git
 ### Create a conda environment by importing 
 
 ```
+cd AIV_seeker
 conda env create -f AIV_seeker_env.yml
 ```
 
