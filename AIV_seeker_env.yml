@@ -5,7 +5,7 @@ channels:
   - defaults
 dependencies:
   - blast=2.5.0
-  - diamond=0.9.14
+  - diamond=2.0.11
   - fastqc
   - fastx_toolkit
   - multiqc
