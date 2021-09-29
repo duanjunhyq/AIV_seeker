@@ -52,7 +52,7 @@ $ bash uninstall_envs.sh
 Mount conda environement
 
 ```
-$ source activate
+$ source activate aiv_seeker
 ```
 
 Test if AIV_sekeer is installed correctly. You can type aiv_seeker.pl in any directory.
