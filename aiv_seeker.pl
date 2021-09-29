@@ -10,7 +10,7 @@ use File::Which;
 use File::Which qw(which);
 
 
-my ($help, $NGS_dir, $result_dir,$flow,$run_cluster,$run_galaxy,$run_debled,$run_paired_only);
+my ($help, $NGS_dir, $result_dir,$flow,$run_cluster,$run_galaxy,$run_debled,$run_paired_only,$keep_running_folder);
 my ($step,$threads,$BSR,$margin,$percent,$overlap_level,$level,$identity_threshold,$cluster_identity,$chimeric_threshold);
 
 GetOptions(
@@ -30,6 +30,7 @@ GetOptions(
     'run_cluster|a' => \$run_cluster,
     'run_galaxy|g' => \$run_galaxy,
     'run_debled|w' => \$run_debled,
+    'keep_running_folder|u' => \$keep_running_folder,
     'run_paired_only|k' => \$run_paired_only,
   );
 
@@ -53,16 +54,16 @@ Simon Fraser University
 
 AIV_Seeker: A pipeline for detecting avian influenza virus from NGS metagenomics Data
 
-Usage: perl AIV_seeker.pl -i run_folder -o result_folder    
+Usage: aiv_seeker.pl -i run_folder -o result_folder -s 1 -f 
          -i path for NGS fastq file directory
          -o result folder
          -s step number
             step 1: Generate the fastq file list
             step 2: Generate QC report
             step 3: Quality filtering
-            step 4: First search by Diamond
-            step 5: Cluster reads
-            step 6: Second search by BLAST
+            step 4: First round search by Diamond
+            step 5: Group reads to remove duplicates
+            step 6: Second round search by BLAST
             step 7: Remove chimeric sequences
             step 8: Assign subtypes and generate report
             step 9: cross-contamination detection and generate report
@@ -85,11 +86,11 @@ EOF
 }
 
 my $exe_path = dirname(__FILE__);
-my $config_file = "$exe_path/config/config.ini";
-my $config = new Config::Simple($config_file);
-my $fastqc = $config->param('fastqc');
-my $multiqc = $config->param('multiqc');
-my $blast = $config->param('blast');
+# my $config_file = "$exe_path/config/config.ini";
+# my $config = new Config::Simple($config_file);
+# my $fastqc = $config->param('fastqc');
+# my $multiqc = $config->param('multiqc');
+# my $blast = $config->param('blast');
 
 my $path_db = "$exe_path/database";
 $step = $step || 0;
@@ -100,7 +101,7 @@ $percent = $percent || 0.9;
 $overlap_level = $overlap_level || 0.7;
 $identity_threshold = $identity_threshold || 90;
 $chimeric_threshold = $chimeric_threshold || 0.75;
-$cluster_identity=$cluster_identity||0.97;
+$cluster_identity=$cluster_identity || 0.97;
 
 if (-d "$NGS_dir") {
     $NGS_dir=~s/\/$//;
@@ -110,11 +111,12 @@ else {
     exit;
 }
 
-check_folder($result_dir);
-my $logs="$result_dir/logs";
+my $result_dir_work="$result_dir/tmp_dir";
+check_folder($result_dir_work);
+my $logs="$result_dir_work/logs";
 check_folder($logs);
 
-my $run_list="$result_dir/filelist.txt";
+my $run_list="$result_dir_work/filelist.txt";
 
 if($step==1 or $step==0) {
     &check_filelist($run_list);
@@ -127,29 +129,29 @@ my @files=&get_lib_list($run_list);
 
 if($step>1) {
     if($step==2) {
-        &QC_report($result_dir,\@files);
+        &QC_report($result_dir_work,\@files);
         if($flow) {
             $step=$step+1;
         }
     }
 
     if($step==3) {
-        if(-s "$result_dir/fastq_sequence_sum.txt") {
-            system("rm -fr $result_dir/fastq_sequence_sum.txt");
+        if(-s "$result_dir_work/fastq_sequence_sum.txt") {
+            system("rm -fr $result_dir_work/fastq_sequence_sum.txt");
         }
-        &quality_filtering($result_dir,\@files);
+        &quality_filtering($result_dir_work,\@files);
         if($run_cluster) {
-            system("cat $result_dir/tmp/*\_fastq_sequence_sum.txt >$result_dir/fastq_sequence_sum.txt");
+            system("cat $result_dir_work/tmp/*\_fastq_sequence_sum.txt >$result_dir_work/fastq_sequence_sum.txt");
         }
-        system("perl $exe_path/src/sum_table.pl -i $result_dir/fastq_sequence_sum.txt -o $result_dir/sum.txt");
+        system("perl $exe_path/src/sum_table.pl -i $result_dir_work/fastq_sequence_sum.txt -o $result_dir_work/sum.txt");
         if($flow) {
             $step=$step+1;
         }
     }
 
     if($step==4) {
-        check_folder("$result_dir/tmp");
-        &search_by_diamond($result_dir,\@files);
+        check_folder("$result_dir_work/tmp");
+        &search_by_diamond($result_dir_work,\@files);
         if($run_cluster) {
             check_qsub_status("aiv_seeker-diamond");
         }
@@ -159,11 +161,11 @@ if($step>1) {
     }
 
     if($step==5) {
-        &get_AIV_reads($result_dir,\@files);
+        &get_AIV_reads($result_dir_work,\@files);
         if($run_cluster) {
             check_qsub_status("aiv_seeker-extract");
         }
-        &cluster_AIV_reads_vsearch($result_dir,\@files);
+        &cluster_AIV_reads_vsearch($result_dir_work,\@files);
         if($run_cluster) {
             check_qsub_status("aiv_seeker-vsearch");
         }
@@ -173,37 +175,43 @@ if($step>1) {
     }
 
     if($step==6) {
-        &blast_AIV($result_dir,\@files);
+        &blast_AIV($result_dir_work,\@files);
         if($flow) {
             $step=$step+1;
         }
     }
 
     if($step==7) {
-        &remove_chimeric($result_dir,\@files);
+        &remove_chimeric($result_dir_work,\@files);
         if($flow) {
             $step=$step+1;
         }
     }
 
     if($step==8) {
-        &assign_subtype_raw($result_dir,\@files);
-        &raw_report($result_dir,\@files);
+        &assign_subtype_raw($result_dir_work,\@files);
+        &raw_report($result_dir,$result_dir_work,\@files);
         if($flow) {
             $step=$step+1;
         }
     }
 
     if($step==9 and $run_debled) {
-        &debleeding($result_dir,\@files);
-        &assign_subtype_debled($result_dir,\@files);
-        &debled_report($result_dir,\@files);
+        &debleeding($result_dir_work,\@files);
+        &assign_subtype_debled($result_dir_work,\@files);
+        &debled_report($result_dir,$result_dir_work,\@files);
     }
+    
+    #delete tmp files
+    if($keep_running_folder){}
+    else {
+        system("rm -fr $result_dir_work");
+    } 
 
     #step101 is a testing function to generate coverage map (assuming only contain one strain for each sample)
     if($step==101) {
-        &find_refseq($result_dir,\@files);
-        &get_depth($result_dir,\@files);
+        &find_refseq($result_dir_work,\@files);
+        &get_depth($result_dir_work,\@files);
     }
 }
 
@@ -250,10 +258,10 @@ sub get_lib_list() {
 }
 
 sub QC_report () {
-    my ($result_dir,$files) = @_;
-    my $dir_raw="$result_dir/0.raw_fastq";
-    my $dir_QC="$result_dir/1.QC_report";
-    my $dir_multiQC="$result_dir/2.multiQC";
+    my ($result_dir_work,$files) = @_;
+    my $dir_raw="$result_dir_work/0.raw_fastq";
+    my $dir_QC="$result_dir_work/1.QC_report";
+    my $dir_multiQC="$result_dir_work/2.multiQC";
     check_folder($dir_raw);
     check_folder($dir_QC);
     check_folder($dir_multiQC);
@@ -261,7 +269,7 @@ sub QC_report () {
         my @libs= split(/\t/,$items); 
         my $libname=$libs[0];
         if($run_cluster) {
-            my $shell= "qsub -o $logs -e $logs -pe mpi $threads $exe_path/src/batch_qsub_fastqc.sh $libs[1] $libs[2] $result_dir $libname $threads";
+            my $shell= "qsub -o $logs -e $logs -pe mpi $threads $exe_path/src/batch_qsub_fastqc.sh $libs[1] $libs[2] $result_dir_work $libname $threads";
             system($shell);
         }
         else {
@@ -297,15 +305,15 @@ sub QC_report () {
 
 
 sub quality_filtering () {
-    my ($result_dir,$files) = @_;
-    my $dir_raw="$result_dir/0.raw_fastq";
-    my $dir_file_processed="$result_dir/3.file_processed";
-    my $dir_fasta_processed="$result_dir/4.fasta_processed";
+    my ($result_dir_work,$files) = @_;
+    my $dir_raw="$result_dir_work/0.raw_fastq";
+    my $dir_file_processed="$result_dir_work/3.file_processed";
+    my $dir_fasta_processed="$result_dir_work/4.fasta_processed";
     check_folder($dir_file_processed);
     check_folder($dir_fasta_processed);
     my $adaptor = "$path_db/adapter.fa";
     if($run_cluster) {
-        check_folder("$result_dir/tmp");
+        check_folder("$result_dir_work/tmp");
         foreach my $items(@$files) {
             my @libs= split(/\t/,$items);
             my $libname=$libs[0];
@@ -313,20 +321,20 @@ sub quality_filtering () {
             if($run_cluster) {
                 if($run_paired_only) {
                     my $run_paired_only_tag="True";
-                    $shell= "qsub -o $logs -e $logs -pe mpi $threads $exe_path/src/batch_qsub_filtering.sh $exe_path $libname $result_dir $adaptor $threads $run_paired_only_tag";
+                    $shell= "qsub -o $logs -e $logs -pe mpi $threads $exe_path/src/batch_qsub_filtering.sh $exe_path $libname $result_dir_work $adaptor $threads $run_paired_only_tag";
                 }
                 else {
-                    $shell= "qsub -o $logs -e $logs -pe mpi $threads $exe_path/src/batch_qsub_filtering.sh $exe_path $libname $result_dir $adaptor $threads";
+                    $shell= "qsub -o $logs -e $logs -pe mpi $threads $exe_path/src/batch_qsub_filtering.sh $exe_path $libname $result_dir_work $adaptor $threads";
                 }
             system($shell);
             }
         }
         check_qsub_status("aiv_seeker-filtering");
-        system("rm -fr $result_dir/tmp/*");
+        system("rm -fr $result_dir_work/tmp/*");
         foreach my $items(@$files) {
             my @libs= split(/\t/,$items);
             my $libname=$libs[0];
-            my $shell= "qsub -o $logs -e $logs -pe mpi $threads $exe_path/src/batch_qsub_stat.sh $exe_path $libname $result_dir";
+            my $shell= "qsub -o $logs -e $logs -pe mpi $threads $exe_path/src/batch_qsub_stat.sh $exe_path $libname $result_dir_work";
             system($shell);
         }
         check_qsub_status("aiv_seeker-stat");
@@ -347,22 +355,22 @@ sub quality_filtering () {
                 system("cat $dir_file_processed/$libname\_P\_R1.fq $dir_file_processed/$libname\_P\_R2.fq $dir_file_processed/$libname\_S\_R1.fq $dir_file_processed/$libname\_S\_R2.fq >$dir_file_processed/$libname\_combine.fastq");
             }      
             system("conda run -n aiv_seeker-fastx_toolkit fastq_to_fasta -Q 33 -i $dir_file_processed/$libname\_combine.fastq -o $dir_fasta_processed/$libname\_raw.fasta");
-            system("perl $exe_path/src/sum_fastq_file.pl -i $dir_raw/$libname\_N\_R1.fq >>$result_dir/fastq_sequence_sum.txt");
-            system("perl $exe_path/src/sum_fastq_file.pl -i $dir_raw/$libname\_N\_R2.fq >>$result_dir/fastq_sequence_sum.txt");
-            system("perl $exe_path/src/sum_fastq_file.pl -i $dir_file_processed/$libname\_P\_R1.fq >>$result_dir/fastq_sequence_sum.txt");
-            system("perl $exe_path/src/sum_fastq_file.pl -i $dir_file_processed/$libname\_P\_R2.fq >>$result_dir/fastq_sequence_sum.txt");
-            system("perl $exe_path/src/sum_fastq_file.pl -i $dir_file_processed/$libname\_S\_R1.fq >>$result_dir/fastq_sequence_sum.txt");
-            system("perl $exe_path/src/sum_fastq_file.pl -i $dir_file_processed/$libname\_S\_R2.fq >>$result_dir/fastq_sequence_sum.txt");
-            system("perl $exe_path/src/sum_fastq_file.pl -i $dir_file_processed/$libname\_combine.fastq >>$result_dir/fastq_sequence_sum.txt");
+            system("perl $exe_path/src/sum_fastq_file.pl -i $dir_raw/$libname\_N\_R1.fq >>$result_dir_work/fastq_sequence_sum.txt");
+            system("perl $exe_path/src/sum_fastq_file.pl -i $dir_raw/$libname\_N\_R2.fq >>$result_dir_work/fastq_sequence_sum.txt");
+            system("perl $exe_path/src/sum_fastq_file.pl -i $dir_file_processed/$libname\_P\_R1.fq >>$result_dir_work/fastq_sequence_sum.txt");
+            system("perl $exe_path/src/sum_fastq_file.pl -i $dir_file_processed/$libname\_P\_R2.fq >>$result_dir_work/fastq_sequence_sum.txt");
+            system("perl $exe_path/src/sum_fastq_file.pl -i $dir_file_processed/$libname\_S\_R1.fq >>$result_dir_work/fastq_sequence_sum.txt");
+            system("perl $exe_path/src/sum_fastq_file.pl -i $dir_file_processed/$libname\_S\_R2.fq >>$result_dir_work/fastq_sequence_sum.txt");
+            system("perl $exe_path/src/sum_fastq_file.pl -i $dir_file_processed/$libname\_combine.fastq >>$result_dir_work/fastq_sequence_sum.txt");
         }
     }
 }
 
 
 sub search_by_diamond () {
-    my ($result_dir,$files) = @_;
-    my $dir_fasta_processed="$result_dir/4.fasta_processed";
-    my $dir_diamond="$result_dir/5.diamond";
+    my ($result_dir_work,$files) = @_;
+    my $dir_fasta_processed="$result_dir_work/4.fasta_processed";
+    my $dir_diamond="$result_dir_work/5.diamond";
     my $diamond_db = "$path_db/avian_pep_db.dmnd";
     #my $diamond = $ini->val( 'tools', 'diamond');
     check_folder($dir_diamond); 
@@ -370,21 +378,21 @@ sub search_by_diamond () {
         my @libs= split(/\t/,$items);
         my $libname=$libs[0];
         if($run_cluster) {
-            my $shell= "qsub -o $logs -e $logs -pe mpi $threads $exe_path/src/batch_qsub_diamond.sh $diamond_db $result_dir $libname $threads";
+            my $shell= "qsub -o $logs -e $logs -pe mpi $threads $exe_path/src/batch_qsub_diamond.sh $diamond_db $result_dir_work $libname $threads";
             system($shell);
         }
         else {
-            system("conda run -n aiv_seeker-diamond diamond blastx -d $diamond_db -q $dir_fasta_processed/$libname\_raw\.fasta -o $dir_diamond/$libname\.m8 -e 100 -p $threads -t $result_dir/tmp --masking 0 ");
+            system("conda run -n aiv_seeker-diamond diamond blastx -d $diamond_db -q $dir_fasta_processed/$libname\_raw\.fasta -o $dir_diamond/$libname\.m8 -e 100 -p $threads -t $result_dir_work/tmp --masking 0 ");
         }
     }
 }
 
 
 sub get_AIV_reads () {
-  my ($result_dir,$files) = @_;
-  my $dir_file_processed="$result_dir/4.fasta_processed";
-  my $dir_diamond="$result_dir/5.diamond";
-  my $aiv_reads_first_round="$result_dir/6.clustered_reads";    
+  my ($result_dir_work,$files) = @_;
+  my $dir_file_processed="$result_dir_work/4.fasta_processed";
+  my $dir_diamond="$result_dir_work/5.diamond";
+  my $aiv_reads_first_round="$result_dir_work/6.clustered_reads";    
   check_folder($aiv_reads_first_round);
   foreach my $items(@$files) {
     my @libs= split(/\t/,$items); 
@@ -400,8 +408,8 @@ sub get_AIV_reads () {
 }
 
 sub cluster_AIV_reads_vsearch () {
-    my ($result_dir,$files) = @_;
-    my $aiv_reads="$result_dir/6.clustered_reads";
+    my ($result_dir_work,$files) = @_;
+    my $aiv_reads="$result_dir_work/6.clustered_reads";
     foreach my $items(@$files) {
         my @libs= split(/\t/,$items);
         my $libname=$libs[0];
@@ -423,11 +431,11 @@ sub cluster_AIV_reads_vsearch () {
 
 
 sub blast_AIV () {
-    my ($result_dir,$files) = @_;
-    my $blast_dir="$result_dir/7.blast";
+    my ($result_dir_work,$files) = @_;
+    my $blast_dir="$result_dir_work/7.blast";
     my $blast_dir_vs_db="$blast_dir/1.blast_to_db";
     my $blast_dir_self="$blast_dir/2.blast_to_self";
-    my $aiv_reads="$result_dir/6.clustered_reads";
+    my $aiv_reads="$result_dir_work/6.clustered_reads";
     my $flu_ref_gene = "$path_db/aiv_gene_0.99";
     check_folder($blast_dir);
     check_folder($blast_dir_vs_db);
@@ -456,14 +464,14 @@ sub blast_AIV () {
 
 
 sub remove_chimeric() {
-    my ($result_dir,$files) = @_;
-    my $dir_chimeric="$result_dir/8.check_chimeric";
+    my ($result_dir_work,$files) = @_;
+    my $dir_chimeric="$result_dir_work/8.check_chimeric";
     my $dir_chimeric_processed="$dir_chimeric/1.processed";
     my $dir_chimeric_seq="$dir_chimeric/2.de_chimeric_seq";
-    my $blast_dir="$result_dir/7.blast";
+    my $blast_dir="$result_dir_work/7.blast";
     my $blast_dir_vs_db="$blast_dir/1.blast_to_db";
     my $blast_dir_self="$blast_dir/2.blast_to_self";
-    my $aiv_reads="$result_dir/6.clustered_reads";
+    my $aiv_reads="$result_dir_work/6.clustered_reads";
     check_folder($dir_chimeric);
     check_folder($dir_chimeric_processed);
     check_folder($dir_chimeric_seq);
@@ -488,10 +496,10 @@ sub remove_chimeric() {
 
 
 sub debleeding() {
-    my ($result_dir,$files) = @_;
+    my ($result_dir_work,$files) = @_;
     my %source_all;
-    my $dir_chimeric_seq="$result_dir/8.check_chimeric/2.de_chimeric_seq";
-    my $dir_debled="$result_dir/10.debled\_$overlap_level\_$cluster_identity";
+    my $dir_chimeric_seq="$result_dir_work/8.check_chimeric/2.de_chimeric_seq";
+    my $dir_debled="$result_dir_work/10.debled\_$overlap_level\_$cluster_identity";
     my $dir_combined_seq="$dir_debled/0.combined_seq";
     check_folder($dir_combined_seq);
     system("rm -fr $dir_combined_seq/*");
@@ -544,10 +552,10 @@ sub debleeding() {
 
 
 sub assign_subtype_debled () {
-    my ($result_dir,$files) = @_;
-    my $blast_dir_vs_db="$result_dir/7.blast/1.blast_to_db";
-    my $blast_dir_self="$result_dir/7.blast/2.blast_to_self";
-    my $dir_debled="$result_dir/10.debled\_$overlap_level\_$cluster_identity";
+    my ($result_dir_work,$files) = @_;
+    my $blast_dir_vs_db="$result_dir_work/7.blast/1.blast_to_db";
+    my $blast_dir_self="$result_dir_work/7.blast/2.blast_to_self";
+    my $dir_debled="$result_dir_work/10.debled\_$overlap_level\_$cluster_identity";
     my $cluster_subtype="$dir_debled/8.subtype_debled";
     my $cluster_subtype_step1_blast_sorted="$cluster_subtype/1.step_blast_sorted";
     my $cluster_subtype_step2_subtype="$cluster_subtype/2.step_subtype_file";
@@ -555,7 +563,7 @@ sub assign_subtype_debled () {
     check_folder($cluster_subtype_step1_blast_sorted);
     check_folder($cluster_subtype_step2_subtype);
     check_folder($cluster_subtype_step3_seq);
-    my $debled_reads_ok="$result_dir/10.debled\_$overlap_level\_$cluster_identity/7.debled_reads_ok";
+    my $debled_reads_ok="$result_dir_work/10.debled\_$overlap_level\_$cluster_identity/7.debled_reads_ok";
     foreach my $items(@$files) {
         my @libs= split(/\t/,$items);
         my $libname=$libs[0];
@@ -565,7 +573,7 @@ sub assign_subtype_debled () {
         my $flu_ref_gene_relation = "$path_db/avian_flu_gene_0.99_relationship.txt";
         if(-s "$debled_reads_ok/$source/$libname\_reads_ok.fa") {
             if($run_cluster) {
-                system("qsub -o $logs -e $logs $exe_path/src/batch_qsub_subtype_debled.sh $exe_path $result_dir $libname $cluster_identity $margin $BSR $percent $flu_ref_gene_relation $source $overlap_level");
+                system("qsub -o $logs -e $logs $exe_path/src/batch_qsub_subtype_debled.sh $exe_path $result_dir_work $libname $cluster_identity $margin $BSR $percent $flu_ref_gene_relation $source $overlap_level");
             }
             else {
                 system("perl $exe_path/src/parse_m8_BSR.pl -i $blast_dir_vs_db/$libname\_blastout.m8 -s $blast_dir_self/$libname\_self.m8 -d $flu_ref_gene_relation -o $cluster_subtype_step1_blast_sorted/$libname\_sorted.txt -m $debled_reads_ok/$source/$libname\_reads_ok.fa");
@@ -584,11 +592,12 @@ sub assign_subtype_debled () {
 }
 
 sub debled_report() {
-    my $dir_report="$result_dir/10.debled\_$overlap_level\_$cluster_identity/9.report_debled";
+    my ($result_dir,$result_dir_work,$files) = @_;
+    my $dir_report="$result_dir_work/10.debled\_$overlap_level\_$cluster_identity/9.report_debled";
     check_folder($dir_report);
-    system("cat $result_dir/10.debled\_$overlap_level\_$cluster_identity/8.subtype_debled/2.step_subtype_file/*_summary_depricated.txt >$dir_report/subtype_report_debled_unsorted.txt");
-    system("cat $result_dir/10.debled\_$overlap_level\_$cluster_identity/8.subtype_debled/2.step_subtype_file/*_summary_uniq.txt >$dir_report/subtype_report_debled_uniq_unsorted.txt");
-    my $gc_sum="$result_dir/sum.txt";
+    system("cat $result_dir_work/10.debled\_$overlap_level\_$cluster_identity/8.subtype_debled/2.step_subtype_file/*_summary_depricated.txt >$dir_report/subtype_report_debled_unsorted.txt");
+    system("cat $result_dir_work/10.debled\_$overlap_level\_$cluster_identity/8.subtype_debled/2.step_subtype_file/*_summary_uniq.txt >$dir_report/subtype_report_debled_uniq_unsorted.txt");
+    my $gc_sum="$result_dir_work/sum.txt";
     my $input="$dir_report/subtype_report_debled_unsorted.txt";
     my $input_uniq="$dir_report/subtype_report_debled_uniq_unsorted.txt";
     my $output="$dir_report/report_debled_raw";
@@ -606,6 +615,14 @@ sub debled_report() {
     }
     system("rm -fr $input");
     system("rm -fr $input_uniq");
+
+    #copy results
+    system("cp -r $dir_report $result_dir");
+    system("cp -r $result_dir_work/10.debled\_$overlap_level\_$cluster_identity/8.subtype_debled/3.step_subtype_seq $result_dir");
+    system("mv $result_dir/9.report_debled $result_dir/report_table_debled");
+    system("mv $result_dir/3.step_subtype_seq $result_dir/report_seq_debled");
+
+
 }
 
 
@@ -636,20 +653,20 @@ sub check_qsub_status {
 }
 
 sub assign_subtype_raw () {
-    my ($result_dir,$files) = @_;
-    my $blast_dir_vs_db="$result_dir/7.blast/1.blast_to_db";
-    my $blast_dir_self="$result_dir/7.blast/2.blast_to_self";
-    my $cluster_subtype="$result_dir/9.subtype\_raw";
+    my ($result_dir_work,$files) = @_;
+    my $blast_dir_vs_db="$result_dir_work/7.blast/1.blast_to_db";
+    my $blast_dir_self="$result_dir_work/7.blast/2.blast_to_self";
+    my $cluster_subtype="$result_dir_work/9.subtype\_raw";
     my $cluster_subtype_step1_blast_sorted="$cluster_subtype/1.step_blast_sorted";
     my $cluster_subtype_step2_subtype="$cluster_subtype/2.step_subtype_file";
     my $cluster_subtype_step3_seq="$cluster_subtype/3.step_subtype_seq";
-    my $dir_chimeric="$result_dir/8.check_chimeric";
+    my $dir_chimeric="$result_dir_work/8.check_chimeric";
     my $dir_chimeric_seq="$dir_chimeric/2.de_chimeric_seq";
-    my $aiv_reads_first_round="$result_dir/6.clustered_reads";
+    my $aiv_reads_first_round="$result_dir_work/6.clustered_reads";
     check_folder($cluster_subtype_step1_blast_sorted);
     check_folder($cluster_subtype_step2_subtype);
     check_folder($cluster_subtype_step3_seq);
-    my $flu_reads_ok="$result_dir/6.clustered_reads";
+    my $flu_reads_ok="$result_dir_work/6.clustered_reads";
     my $blast_db_ano = "$path_db/avian_flu_gene_0.99_relationship.txt";
     foreach my $items(@$files) {
         my @libs= split(/\t/,$items);
@@ -658,7 +675,7 @@ sub assign_subtype_raw () {
         check_folder("$cluster_subtype_step3_seq/$source");
         if(-s "$dir_chimeric_seq/$libname\_no_chimeric.fa") {
             if($run_cluster) {
-                my $shell="qsub -o $logs -e $logs $exe_path/src/batch_qsub_subtype_raw.sh $exe_path $result_dir $libname $margin $BSR $percent $blast_db_ano $source";
+                my $shell="qsub -o $logs -e $logs $exe_path/src/batch_qsub_subtype_raw.sh $exe_path $result_dir_work $libname $margin $BSR $percent $blast_db_ano $source";
                 system($shell);
             }
             else {
@@ -678,11 +695,12 @@ sub assign_subtype_raw () {
 }
 
 sub raw_report() {
-    my $dir_report="$result_dir/9.subtype_raw/4.report";
+    my ($result_dir,$result_dir_work,$files) = @_;
+    my $dir_report="$result_dir_work/9.subtype_raw/4.report";
     check_folder($dir_report);
-    system("cat $result_dir/9.subtype\_raw/2.step_subtype_file/*_summary_depricated.txt >$dir_report/subtype_report_raw_unsorted.txt");
-    system("cat $result_dir/9.subtype\_raw/2.step_subtype_file/*_summary_uniq.txt >$dir_report/subtype_report_uniq_unsorted.txt");
-    my $gc_sum="$result_dir/sum.txt";
+    system("cat $result_dir_work/9.subtype\_raw/2.step_subtype_file/*_summary_depricated.txt >$dir_report/subtype_report_raw_unsorted.txt");
+    system("cat $result_dir_work/9.subtype\_raw/2.step_subtype_file/*_summary_uniq.txt >$dir_report/subtype_report_uniq_unsorted.txt");
+    my $gc_sum="$result_dir_work/sum.txt";
     my $input="$dir_report/subtype_report_raw_unsorted.txt";
     my $input_uniq="$dir_report/subtype_report_uniq_unsorted.txt";
     my $output="$dir_report/report_raw";
@@ -698,11 +716,19 @@ sub raw_report() {
     }
     system("rm -fr $input");
     system("rm -fr $input_uniq");
+
+    #copy results files
+    system("cp -r $dir_report $result_dir");
+    system("cp -r $result_dir_work/9.subtype_raw/3.step_subtype_seq $result_dir");
+    system("mv $result_dir/4.report $result_dir/report_table");
+    system("mv $result_dir/3.step_subtype_seq $result_dir/report_seq");
+
+ 
 }
 
 sub find_refseq () {
-  my ($result_dir,$files) = @_;
-  my $coverage_dir="$result_dir/101.coverage";
+  my ($result_dir_work,$files) = @_;
+  my $coverage_dir="$result_dir_work/101.coverage";
   my $refseq_tab="$coverage_dir/1.ref_align_tab";
   my $refseq_seq="$coverage_dir/2.ref_seq";
   check_folder("$refseq_tab");
@@ -714,7 +740,7 @@ sub find_refseq () {
     my $libname=$libs[0];
 
     ##method 1
-    my $dir_chimeric_seq="$result_dir/8.check_chimeric/2.de_chimeric_seq/$libname\_no_chimeric.fa";
+    my $dir_chimeric_seq="$result_dir_work/8.check_chimeric/2.de_chimeric_seq/$libname\_no_chimeric.fa";
     system("mash sketch -m 5 $dir_chimeric_seq");
     system("mash dist $mash_ref_db $dir_chimeric_seq\.msh > $refseq_tab/$libname.tab");
     system("sort -gk3 $refseq_tab/$libname.tab >$refseq_tab/$libname\_sorted.tab");
@@ -723,8 +749,8 @@ sub find_refseq () {
     system("mv $libname\_g.txt $refseq_seq");
     #method 2
     # my $HA_NA="$refseq_tab/$libname\_HA_NA.fa";
-    # system("cat $result_dir/9.subtype_raw/3.step_subtype_seq/1.raw/$libname\_A\_HA\_*.fa >$HA_NA");
-    # system("cat $result_dir/9.subtype_raw/3.step_subtype_seq/1.raw/$libname\_A\_NA\_*.fa >>$HA_NA");
+    # system("cat $result_dir_work/9.subtype_raw/3.step_subtype_seq/1.raw/$libname\_A\_HA\_*.fa >$HA_NA");
+    # system("cat $result_dir_work/9.subtype_raw/3.step_subtype_seq/1.raw/$libname\_A\_NA\_*.fa >>$HA_NA");
     # system("mash sketch -m 5 $HA_NA");
     # system("mash dist $mash_ref_db $HA_NA\.msh > $refseq_tab/$libname.tab");
     # system("sort -gk3 $refseq_tab/$libname.tab >$refseq_tab/$libname\_sorted.tab");
@@ -736,8 +762,8 @@ sub find_refseq () {
 }
 
 sub get_depth() {
-  my ($result_dir,$files) = @_;
-  my $coverage_dir="$result_dir/101.coverage";
+  my ($result_dir_work,$files) = @_;
+  my $coverage_dir="$result_dir_work/101.coverage";
   my $refseq_tab="$coverage_dir/1.ref_align_tab";
   my $refseq_seq="$coverage_dir/2.ref_seq";
   my $dir_depth="$coverage_dir/3.depth";
@@ -746,7 +772,7 @@ sub get_depth() {
   foreach my $items(@$files) {
     my @libs= split(/\t/,$items); 
     my $libname=$libs[0];
-    my $dir_chimeric_seq="$result_dir/8.check_chimeric/2.de_chimeric_seq/$libname\_no_chimeric.fa";
+    my $dir_chimeric_seq="$result_dir_work/8.check_chimeric/2.de_chimeric_seq/$libname\_no_chimeric.fa";
     system("bowtie2-build $refseq_seq/$libname\_ref.fa $refseq_seq/$libname\_refdb");
     system("bowtie2 -x $refseq_seq/$libname\_refdb -f $dir_chimeric_seq -S $dir_depth/$libname.sam");
     system("samtools view -bS $dir_depth/$libname.sam > $dir_depth/$libname.bam");
@@ -763,6 +789,6 @@ sub get_depth() {
     }
     
   }
-  system("python $exe_path/src/draw_coverage_v0.5.py -i $result_dir/filelist.txt -d $dir_depth -o $coverage_dir/coverage_fig");
+  system("python $exe_path/src/draw_coverage_v0.5.py -i $result_dir_work/filelist.txt -d $dir_depth -o $coverage_dir/coverage_fig");
     
 }
