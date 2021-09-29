@@ -52,7 +52,7 @@ https://github.com/duanjunhyq/AIV_seeker
 
 ####################################################################
 
-AIV_Seeker: A pipeline for detecting avian influenza virus from NGS metagenomics Data
+AIV_seeker: A pipeline for detecting avian influenza virus from NGS metagenomics Data
 
 Usage: aiv_seeker.pl -i run_folder -o result_folder -s 1 -f 
          -i path for NGS fastq file directory
