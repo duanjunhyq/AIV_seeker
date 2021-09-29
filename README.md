@@ -14,11 +14,11 @@
 Download the code from GitHub
 
 ```
-git clone https://github.com/duanjunhyq/AIV_seeker.git
+$ git clone https://github.com/duanjunhyq/AIV_seeker.git
 
 ```
 
-install environments 
+Install environments 
 
 ```
 cd AIV_seeker
