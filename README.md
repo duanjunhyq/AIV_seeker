@@ -8,17 +8,17 @@
 ## AIV_seeker is optimized for detecting and identification of Avian Influenza Virus from metagenomics data.
 
 
-### installation
+### How to install
 
 
-### Download the code from GitHub
+Download the code from GitHub
 
 ```
 git clone https://github.com/duanjunhyq/AIV_seeker.git
 
 ```
 
-### install environments 
+install environments 
 
 ```
 cd AIV_seeker
