@@ -22,7 +22,6 @@ echo "=== Installing pipeline's Conda environments ==="
 
 if [[ "$1" == mamba ]]; then
   conda install mamba -y -c conda-forge
-  mamba create -n ${CONDA_ENV_blast} --file ${REQ_BLAST} -y -c defaults -c r -c bioconda -c conda-forge
   mamba create -n ${CONDA_ENV_BLAST} -y -c defaults -c bioconda -c conda-forge blast=$blast
   mamba create -n ${CONDA_ENV_DIAMOND} -y -c defaults -c bioconda -c conda-forge diamond=$diamond
   mamba create -n ${CONDA_ENV_FASTQC} -y -c defaults -c bioconda -c conda-forge fastqc=$fastqc

@@ -5,10 +5,6 @@ use strict;
 use warnings;
 use Getopt::Long;
 use File::Basename;
-use Config::Simple;
-use File::Which;
-use File::Which qw(which);
-
 
 my ($help, $NGS_dir, $result_dir,$flow,$auto,$run_cluster,$run_galaxy,$run_debled,$run_paired_only,$keep_running_folder);
 my ($step,$threads,$BSR,$margin,$percent,$overlap_level,$level,$identity_threshold,$cluster_identity,$chimeric_threshold);
@@ -47,8 +43,12 @@ die <<EOF;
 ██║░░██║██║░░╚██╔╝░░██████╔╝███████╗███████╗██║░╚██╗███████╗██║░░██║
 ╚═╝░░╚═╝╚═╝░░░╚═╝░░░╚═════╝░╚══════╝╚══════╝╚═╝░░╚═╝╚══════╝╚═╝░░╚═╝                       
 
+AIV_seeker(v0.2) maintained by duanjun1981\@gmail.com
+
 Centre for Infectious Disease Genomics and One Health
 Simon Fraser University
+
+https://github.com/duanjunhyq/AIV_seeker
 
 ####################################################################
 
@@ -627,7 +627,7 @@ sub debled_report() {
     #copy results
     system("cp -r $dir_report $result_dir");
     system("cp -r $result_dir_work/10.debled\_$overlap_level\_$cluster_identity/8.subtype_debled/3.step_subtype_seq $result_dir");
-    system("mv $result_dir/9.report_debled $result_dir/report_table_debled");
+    system("mv $result_dir/9.report_debled $result_dir/report_debled");
     system("mv $result_dir/3.step_subtype_seq $result_dir/report_seq_debled");
 
 
@@ -727,8 +727,9 @@ sub raw_report() {
 
     #copy results files
     system("cp -r $dir_report $result_dir");
-    system("cp -r $result_dir_work/9.subtype_raw/3.step_subtype_seq $result_dir");
-    system("mv $result_dir/4.report $result_dir/report_table");
+    system("cp -r $result_dir_work/9.subtype_raw/3.step_subtype_seq $result_dir");    
+    system("mv $result_dir/4.report $result_dir/report");
+    system("cp $result_dir_work/2.multiQC/multiQC_report.html $result_dir/report/");
     system("mv $result_dir/3.step_subtype_seq $result_dir/report_seq");
 
  
