@@ -40,19 +40,32 @@ Tips: If it takes too long to resolve Conda package conflicts, then try with mam
 ```
 $ bash install_envs.sh
 ```
-### Activate conda environment 
+
+If there is anything wrong with the environment, you can uninstall environment:
 
 ```
-source activate aiv_seeker
+$ bash uninstall_envs.sh
+```
+
+### How to use
+
+Mount conda environement
+
+```
+$ source activate
+```
+
+Test if AIV_sekeer is installed correctly. You can type aiv_seeker.pl in any directory.
+
+```
+$ aiv_seeker.pl
+```
+
+Then it will promot like this:
 
 ```
 
-
-### Usage
-
-```
-
-AIV_Seeker: A pipeline for detecting avian influenza virus from NGS metagenomics Data
+AIV_seeker: A pipeline for detecting avian influenza virus from NGS metagenomics Data
 
 Usage: aiv_seeker.pl -i run_folder -o result_folder
          -i path for NGS fastq file directory
@@ -84,5 +97,8 @@ Usage: aiv_seeker.pl -i run_folder -o result_folder
          -u keep the intermediate files (default remove)
 
 ```
+
+
+
 
 <img src="https://github.com/duanjunhyq/AIV_seeker/blob/master/img/subtype.jpg">
