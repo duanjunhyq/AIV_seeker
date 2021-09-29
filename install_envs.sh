@@ -30,7 +30,7 @@ if [[ "$1" == mamba ]]; then
   mamba create -n ${CONDA_ENV_TRIMMOMATIC} -y -c defaults -c bioconda -c conda-forge trimmomatic=$trimmomatic
   mamba create -n ${CONDA_ENV_VSEARCH} -y -c defaults -c bioconda -c conda-forge vsearch=$vsearch
   mamba create -n ${CONDA_ENV_FASTX_TOOLKIT} -y -c defaults -c bioconda -c conda-forge fastx_toolkit=$fastx_toolkit
-  mamba create -n ${CONDA_ENV_MAIN} -y -c defaults -c bioconda -c conda-forge perl=$perl perl-file-which=$perlfilewhich perl-config-simple=$perlconfigsimple python=$python seaborn=$seaborn
+  mamba create -n ${CONDA_ENV_MAIN} -y -c defaults -c bioconda -c conda-forge perl=$perl python=$python seaborn=$seaborn
 else
   echo
   echo "If it takes too long to resolve conflicts, then try with mamba."
@@ -41,14 +41,14 @@ else
   echo "If you get another conflict in the mamba installation step itself "
   echo "Then you may need to clean-install miniconda3 and re-login."
   echo
-  # conda create -n ${CONDA_ENV_BLAST} -y -c defaults -c bioconda -c conda-forge blast=$blast
-  # conda create -n ${CONDA_ENV_DIAMOND} -y -c defaults -c bioconda -c conda-forge diamond=$diamond
-  # conda create -n ${CONDA_ENV_FASTQC} -y -c defaults -c bioconda -c conda-forge fastqc=$fastqc
-  # conda create -n ${CONDA_ENV_MULTIQC} -y -c defaults -c bioconda -c conda-forge multiqc=$multiqc
-  # conda create -n ${CONDA_ENV_TRIMMOMATIC} -y -c defaults -c bioconda -c conda-forge trimmomatic=$trimmomatic
-  # conda create -n ${CONDA_ENV_VSEARCH} -y -c defaults -c bioconda -c conda-forge vsearch=$vsearch
-  # conda create -n ${CONDA_ENV_FASTX_TOOLKIT} -y -c defaults -c bioconda -c conda-forge fastx_toolkit=$fastx_toolkit
-  # conda create -n ${CONDA_ENV_MAIN} -y -c defaults -c bioconda -c conda-forge perl=$perl perl-file-which=$perlfilewhich perl-config-simple=$perlconfigsimple python=$python seaborn=$seaborn
+  conda create -n ${CONDA_ENV_BLAST} -y -c defaults -c bioconda -c conda-forge blast=$blast
+  conda create -n ${CONDA_ENV_DIAMOND} -y -c defaults -c bioconda -c conda-forge diamond=$diamond
+  conda create -n ${CONDA_ENV_FASTQC} -y -c defaults -c bioconda -c conda-forge fastqc=$fastqc
+  conda create -n ${CONDA_ENV_MULTIQC} -y -c defaults -c bioconda -c conda-forge multiqc=$multiqc
+  conda create -n ${CONDA_ENV_TRIMMOMATIC} -y -c defaults -c bioconda -c conda-forge trimmomatic=$trimmomatic
+  conda create -n ${CONDA_ENV_VSEARCH} -y -c defaults -c bioconda -c conda-forge vsearch=$vsearch
+  conda create -n ${CONDA_ENV_FASTX_TOOLKIT} -y -c defaults -c bioconda -c conda-forge fastx_toolkit=$fastx_toolkit
+  conda create -n ${CONDA_ENV_MAIN} -y -c defaults -c bioconda -c conda-forge perl=$perl python=$python seaborn=$seaborn
 fi
 
 
