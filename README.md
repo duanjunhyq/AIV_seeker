@@ -11,49 +11,49 @@
 ##installation
 
 
-### Download the code 
+### Download the code from GitHub
 
 ```
 git clone https://github.com/duanjunhyq/AIV_seeker.git
+
 ```
 
-### Create a conda environment by importing 
+### install environments 
 
 ```
 cd AIV_seeker
-conda env create -f AIV_seeker_env.yml
-```
+bash install_envs.sh
 
+```
 
 ### Activate conda environment 
 
 ```
-source activate __aiv_seeker@0.1
+source activate aiv_seeker
+
 ```
 
-Please install File::Which Perl module if it's missing.
-```
-cpan install File::Which
-```
 
 ### Usage
 
 ```
 
-Usage: perl AIV_seeker.pl -i run_folder -o result_folder    
+AIV_Seeker: A pipeline for detecting avian influenza virus from NGS metagenomics Data
+
+Usage: aiv_seeker.pl -i run_folder -o result_folder
          -i path for NGS fastq file directory
          -o result folder
          -s step number
             step 1: Generate the fastq file list
             step 2: Generate QC report
             step 3: Quality filtering
-            step 4: First search by Diamond
-            step 5: Cluster reads
-            step 6: Second search by BLAST
+            step 4: First round search by Diamond
+            step 5: Group reads to remove duplicates
+            step 6: Second round search by BLAST
             step 7: Remove chimeric sequences
             step 8: Assign subtypes and generate report
             step 9: cross-contamination detection and generate report
-         -f run the current step and following steps (default false), no parameter
+         -f only run the designated step (defined by -s, default false), no parameter
          -b BSR score (default 0.4)
          -m margin of BSR score (default 0.3)
          -p percentage of concordant subtype (default 0.9)
@@ -67,6 +67,7 @@ Usage: perl AIV_seeker.pl -i run_folder -o result_folder
          -g run galaxy job (default false)
          -w run debleeding process
          -k generate results based on paired reads only (remove unpaired reads)
+         -u keep the intermediate files (default remove)
 
 ```
 
