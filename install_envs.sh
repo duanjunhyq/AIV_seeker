@@ -41,14 +41,14 @@ else
   echo "If you get another conflict in the mamba installation step itself "
   echo "Then you may need to clean-install miniconda3 and re-login."
   echo
-  conda create -n ${CONDA_ENV_BLAST} -y -c defaults -c bioconda -c conda-forge blast=$blast
-  conda create -n ${CONDA_ENV_DIAMOND} -y -c defaults -c bioconda -c conda-forge diamond=$diamond
-  conda create -n ${CONDA_ENV_FASTQC} -y -c defaults -c bioconda -c conda-forge fastqc=$fastqc
-  conda create -n ${CONDA_ENV_MULTIQC} -y -c defaults -c bioconda -c conda-forge multiqc=$multiqc
-  conda create -n ${CONDA_ENV_TRIMMOMATIC} -y -c defaults -c bioconda -c conda-forge trimmomatic=$trimmomatic
-  conda create -n ${CONDA_ENV_VSEARCH} -y -c defaults -c bioconda -c conda-forge vsearch=$vsearch
-  conda create -n ${CONDA_ENV_FASTX_TOOLKIT} -y -c defaults -c bioconda -c conda-forge fastx_toolkit=$fastx_toolkit
-  conda create -n ${CONDA_ENV_MAIN} -y -c defaults -c bioconda -c conda-forge perl=$perl perl-file-which=$perlfilewhich perl-config-simple=$perlconfigsimple python=$python seaborn=$seaborn
+  # conda create -n ${CONDA_ENV_BLAST} -y -c defaults -c bioconda -c conda-forge blast=$blast
+  # conda create -n ${CONDA_ENV_DIAMOND} -y -c defaults -c bioconda -c conda-forge diamond=$diamond
+  # conda create -n ${CONDA_ENV_FASTQC} -y -c defaults -c bioconda -c conda-forge fastqc=$fastqc
+  # conda create -n ${CONDA_ENV_MULTIQC} -y -c defaults -c bioconda -c conda-forge multiqc=$multiqc
+  # conda create -n ${CONDA_ENV_TRIMMOMATIC} -y -c defaults -c bioconda -c conda-forge trimmomatic=$trimmomatic
+  # conda create -n ${CONDA_ENV_VSEARCH} -y -c defaults -c bioconda -c conda-forge vsearch=$vsearch
+  # conda create -n ${CONDA_ENV_FASTX_TOOLKIT} -y -c defaults -c bioconda -c conda-forge fastx_toolkit=$fastx_toolkit
+  # conda create -n ${CONDA_ENV_MAIN} -y -c defaults -c bioconda -c conda-forge perl=$perl perl-file-which=$perlfilewhich perl-config-simple=$perlconfigsimple python=$python seaborn=$seaborn
 fi
 
 
@@ -62,15 +62,6 @@ CONDA_PREFIX_VSEARCH=$(conda env list | grep -E "\b${CONDA_ENV_VSEARCH}[[:space:
 CONDA_PREFIX_FASTX_TOOLKIT=$(conda env list | grep -E "\b${CONDA_ENV_FASTX_TOOLKIT}[[:space:]]" | awk '{if (NF==3) print $3; else print $2}')
 CONDA_PREFIX_MAIN=$(conda env list | grep -E "\b${CONDA_ENV_MAIN}[[:space:]]" | awk '{if (NF==3) print $3; else print $2}')
 
-echo $CONDA_PREFIX_BLAST
-echo $CONDA_PREFIX_DIMAOND
-echo $CONDA_PREFIX_FASTQC
-echo $CONDA_PREFIX_MULTIQC
-echo $CONDA_PREFIX_TRIMMOMATIC
-echo $CONDA_PREFIX_VSEARCH
-echo $CONDA_PREFIX_FASTX_TOOLKIT
-echo $CONDA_PREFIX_MAIN
-
 if [ ! "${CONDA_PREFIX_BLAST}" -o ! "${CONDA_PREFIX_DIMAOND}" -o ! "${CONDA_PREFIX_FASTQC}" -o ! "${CONDA_PREFIX_MULTIQC}" -o ! "${CONDA_PREFIX_TRIMMOMATIC}" -o ! "${CONDA_PREFIX_VSEARCH}" -o ! "${CONDA_PREFIX_FASTX_TOOLKIT}"  -o ! "${CONDA_PREFIX_MAIN}" ];
 then
 	echo "Error: Pipeline's Conda environments not found."
@@ -79,16 +70,6 @@ then
 	echo "1) $ bash uninstall_conda_env.sh"
 	echo "2) $ bash install_conda_env.sh"
 	exit 1
-# else
-# 	echo "blast=$CONDA_PREFIX_BLAST/bin/blast" >$CONFIG_FILE
-# 	echo "diamond=$CONDA_PREFIX_DIMAOND/bin/diamond" >>$CONFIG_FILE
-# 	echo "fastqc=$CONDA_PREFIX_FASTQC/bin/fastqc" >>$CONFIG_FILE
-# 	echo "multiqc=$CONDA_PREFIX_MULTIQC/bin/multiqc" >>$CONFIG_FILE
-# 	echo "trimmomatic=$CONDA_PREFIX_TRIMMOMATIC" >>$CONFIG_FILE
-# 	echo "vsearch=$CONDA_PREFIX_VSEARCH/bin/vsearch" >>$CONFIG_FILE
-# 	echo "fastx_toolkit=$CONDA_PREFIX_FASTX_TOOLKIT" >>$CONFIG_FILE
-# 	echo "main=$CONDA_PREFIX_MAIN" >>$CONFIG_FILE
-
 fi
 
 
@@ -115,6 +96,7 @@ conda run -n aiv_seeker-blast makeblastdb -in ${SCRIPT_DIR}/database/avian_flu_g
 # chmod u+rx $SCRIPT_DIR/module/*.sh
 
 echo "export PATH=${SCRIPT_DIR}:\$PATH" > ${CONDA_ACTIVATE_SH}
+echo "export QT_XKB_CONFIG_ROOT=/usr/share/X11/xkb" >> ${CONDA_ACTIVATE_SH}
 
 echo "=== All done successfully ==="
 
