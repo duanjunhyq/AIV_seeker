@@ -15,15 +15,13 @@ Download the code from GitHub
 
 ```
 $ git clone https://github.com/duanjunhyq/AIV_seeker.git
-
 ```
 
 Install environments 
 
 ```
-cd AIV_seeker
-bash install_envs.sh
-
+$ cd AIV_seeker
+$ bash install_envs.sh
 ```
 
 ### Activate conda environment 
