@@ -7,6 +7,17 @@
 
 ## AIV_seeker is optimized for detecting and identification of Avian Influenza Virus from metagenomics data.
 
+### Introduction
+
+The application of next generation sequencing (NGS) in infectious disease surveillance and outbreak investigations has become a promising area. Environmental sampling provides a method to collect and identify potentially dangerous pathogens that are circulating in an animal population, however detection of a low-abundance pathogen target in a large metagenomic background is still a challenge. AIV_seeker pipeline that is optimized for detecting and identifying low-abundance avian influenza virus (AIV) from metagenomic NGS data. 
+
+Features
+*  AIV_seeker can be used to automatically process metagenomics NGS data and generate subtyping results.
+*  A heatmap is generated to visualize the results.
+*  An experimental method is incorporated to deal with index-hopping issue resulted from Illumina platfrom
+*  The results can be used to generate phylogenetic tree through our another pipeline AIV_tree
+*  Web based service has been developed for Galaxy and IRIDA (http://206.12.95.227/). 
+
 
 ### How to install
 
