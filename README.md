@@ -99,6 +99,38 @@ Usage: aiv_seeker.pl -i run_folder -o result_folder
 ```
 
 
+Once you put all your NGS raw data in a folder, you can run the pipeline like this
+
+```
+$ aiv_seeker.pl -i your_input_folder -o your_output_folder
+```
+
+If you are using Sun Grid Engine scheduler, you can add "-a" to let it run by cluster, and add "-t" to designate how many threads you want to use like this
+
+```
+$ aiv_seeker.pl -i your_input_folder -o your_output_folder -a -t 20
+```
+
+The default is not to keep intermediate files. If you want to keep intermediate files, you can add "-u"
+
+```
+$ aiv_seeker.pl -i your_input_folder -o your_output_folder -t 20 -u
+```
+
+The default is not to run debleeding step. You can add "-w" to get debleeding results
+
+```
+$ aiv_seeker.pl -i your_input_folder -o your_output_folder -t 20 -w
+```
+
+If you want to run some specific step, you can run it like this:
+
+```
+$ aiv_seeker.pl -i your_input_folder -o your_output_folder -t 20 -s 1 -f
+```
+
+
+### How to find results
 
 
 <img src="https://github.com/duanjunhyq/AIV_seeker/blob/master/img/subtype.jpg">
