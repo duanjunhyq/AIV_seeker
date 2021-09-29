@@ -10,7 +10,7 @@ use File::Which;
 use File::Which qw(which);
 
 
-my ($help, $NGS_dir, $result_dir,$flow,$run_cluster,$run_galaxy,$run_debled,$run_paired_only,$keep_running_folder);
+my ($help, $NGS_dir, $result_dir,$flow,$auto,$run_cluster,$run_galaxy,$run_debled,$run_paired_only,$keep_running_folder);
 my ($step,$threads,$BSR,$margin,$percent,$overlap_level,$level,$identity_threshold,$cluster_identity,$chimeric_threshold);
 
 GetOptions(
@@ -67,7 +67,7 @@ Usage: aiv_seeker.pl -i run_folder -o result_folder -s 1 -f
             step 7: Remove chimeric sequences
             step 8: Assign subtypes and generate report
             step 9: cross-contamination detection and generate report
-         -f run the current step and following steps (default false), no parameter
+         -f only run the designated step (defined by -s, default false), no parameter
          -b BSR score (default 0.4)
          -m margin of BSR score (default 0.3)
          -p percentage of concordant subtype (default 0.9)
@@ -81,6 +81,7 @@ Usage: aiv_seeker.pl -i run_folder -o result_folder -s 1 -f
          -g run galaxy job (default false)
          -w run debleeding process
          -k generate results based on paired reads only (remove unpaired reads)
+         -u keep the intermediate files (default remove)
          
 EOF
 }
@@ -93,7 +94,7 @@ my $exe_path = dirname(__FILE__);
 # my $blast = $config->param('blast');
 
 my $path_db = "$exe_path/database";
-$step = $step || 0;
+$step = $step || 1;
 $threads = $threads || 2;
 $BSR = $BSR || 0.4;
 $margin = $margin || 0.3;
@@ -117,11 +118,18 @@ my $logs="$result_dir_work/logs";
 check_folder($logs);
 
 my $run_list="$result_dir_work/filelist.txt";
+if($flow) {
+    $auto=0;
+}
+else {
+    $auto=1;
+}
 
-if($step==1 or $step==0) {
+
+if($step==1) {
     &check_filelist($run_list);
-    if($flow) {
-        $step=2;
+    if($auto) {
+        $step=$step+1;
     }
 }
 
@@ -130,7 +138,7 @@ my @files=&get_lib_list($run_list);
 if($step>1) {
     if($step==2) {
         &QC_report($result_dir_work,\@files);
-        if($flow) {
+        if($auto) {
             $step=$step+1;
         }
     }
@@ -144,7 +152,7 @@ if($step>1) {
             system("cat $result_dir_work/tmp/*\_fastq_sequence_sum.txt >$result_dir_work/fastq_sequence_sum.txt");
         }
         system("perl $exe_path/src/sum_table.pl -i $result_dir_work/fastq_sequence_sum.txt -o $result_dir_work/sum.txt");
-        if($flow) {
+        if($auto) {
             $step=$step+1;
         }
     }
@@ -155,7 +163,7 @@ if($step>1) {
         if($run_cluster) {
             check_qsub_status("aiv_seeker-diamond");
         }
-        if($flow) {
+        if($auto) {
             $step=$step+1;
         }
     }
@@ -169,21 +177,21 @@ if($step>1) {
         if($run_cluster) {
             check_qsub_status("aiv_seeker-vsearch");
         }
-        if($flow) {
+        if($auto) {
             $step=$step+1;
         }
     }
 
     if($step==6) {
         &blast_AIV($result_dir_work,\@files);
-        if($flow) {
+        if($auto) {
             $step=$step+1;
         }
     }
 
     if($step==7) {
         &remove_chimeric($result_dir_work,\@files);
-        if($flow) {
+        if($auto) {
             $step=$step+1;
         }
     }
@@ -191,7 +199,7 @@ if($step>1) {
     if($step==8) {
         &assign_subtype_raw($result_dir_work,\@files);
         &raw_report($result_dir,$result_dir_work,\@files);
-        if($flow) {
+        if($auto) {
             $step=$step+1;
         }
     }
