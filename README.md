@@ -24,6 +24,11 @@ $ cd AIV_seeker
 $ bash install_envs.sh
 ```
 
+Tips: If it takes too long to resolve Conda package conflicts, then try with mamba to install environments.
+
+```
+$ bash install_envs.sh
+```
 ### Activate conda environment 
 
 ```
