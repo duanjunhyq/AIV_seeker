@@ -39,7 +39,7 @@ $ bash install_envs.sh
 Tips: If it takes too long to resolve Conda package conflicts, then try with mamba to install environments.
 
 ```
-$ bash install_envs.sh
+$ bash install_envs.sh mamba
 ```
 
 If there is anything wrong with the environment, you can uninstall environment:
