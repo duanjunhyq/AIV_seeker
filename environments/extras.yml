@@ -1,0 +1,8 @@
+name: nf-ncov-voc-extra
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - cyvcf=0.8.0
+  - gffutils=0.10.1
