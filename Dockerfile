@@ -1,5 +1,3 @@
-# It's still under testing
-
 FROM ubuntu:18.04
 
 LABEL maintainer="duanjun1981@gmail.com"
