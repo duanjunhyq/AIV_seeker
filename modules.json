@@ -1,0 +1,29 @@
+{
+    "name": "nf-ncov-voc",
+    "homePage": "https://github.com/cidgoh/nf-ncov-voc",
+    "repos": {
+        "nf-core/modules": {
+            "blast/blastn": {
+                "git_sha": "e745e167c1020928ef20ea1397b6b4d230681b4d"
+            },
+            "blast/makeblastdb": {
+                "git_sha": "e745e167c1020928ef20ea1397b6b4d230681b4d"
+            },
+            "diamond/blastx": {
+                "git_sha": "e745e167c1020928ef20ea1397b6b4d230681b4d"
+            },
+            "diamond/makedb": {
+                "git_sha": "e745e167c1020928ef20ea1397b6b4d230681b4d"
+            },
+            "gunzip": {
+                "git_sha": "e937c7950af70930d1f34bb961403d9d2aa81c7d"
+            },
+            "pangolin": {
+                "git_sha": "9d0cad583b9a71a6509b754fdf589cbfbed08961"
+            },
+            "spades": {
+                "git_sha": "e937c7950af70930d1f34bb961403d9d2aa81c7d"
+            }
+        }
+    }
+}

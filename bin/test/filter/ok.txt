@@ -1,0 +1,7 @@
+read_id,subtype,max_occurrency,total,ratio
+sample1-146;size=1,N7,1,1,1.0
+sample1-148;size=1,N7,1,1,1.0
+sample1-226;size=1,N7,1,1,1.0
+sample1-213;size=1,N7,1,1,1.0
+sample1-20;size=1,N7,1,1,1.0
+sample1-15;size=1,N7,1,1,1.0
