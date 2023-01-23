@@ -34,5 +34,5 @@ RUN mkdir /build && \
     chmod -R 755 /build
 
 # Default command to be bash
-ENTRYPOINT ["/opt/conda/bin/conda", "run", "-n", "aiv_seeker", "aiv_seeker.pl"]
+# ENTRYPOINT ["/opt/conda/bin/conda", "run", "-n", "aiv_seeker", "aiv_seeker.pl"]
 #CMD ["/bin/bash"]
